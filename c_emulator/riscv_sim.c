@@ -965,6 +965,26 @@ void run_sail(void)
         }
         continue;
       }
+      case 'i': { /* Interrupt request */
+        // Set specified interrupt bit in mip
+        mach_bits insn = zrvfi_get_insn(UNIT);
+        if (config_print_rvfi) {
+          fprintf(stderr, "DII_INTERRUPT_REQUEST: set mip[%d]\n", insn);
+        }
+        zmip = zmip | (0b1 << insn);
+        continue;
+        // break;
+      }
+      case 'I': { /* Interrupt barrier */
+        if (config_print_rvfi) {
+          fprintf(stderr, "DII_INTERRUPT_BARRIER: implemented as a NOP for this simple pipeline\n");
+          // fprintf(stderr, "DII_INTERRUPT_BARRIER: does nothing for this model\n");
+        }
+        instr_bits = 0x00000013;
+        zrvfi_set_instr_packet(instr_bits);
+        break;
+        // continue;
+      }
       default:
         fprintf(stderr, "Unknown RVFI-DII command: %#02x\n", (int)cmd);
         exit(1);

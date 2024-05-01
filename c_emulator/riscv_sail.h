@@ -43,6 +43,9 @@ void zrvfi_get_v2_support_packet(sail_bits *rop, unit);
 // Debugging prints
 unit zprint_rvfi_exec(unit);
 unit zprint_instr_packet(uint64_t);
+
+// Interrupt mechanism
+extern uint64_t zmip;
 #endif
 
 extern mach_bits zxlen_val;
