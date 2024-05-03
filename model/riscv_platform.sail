@@ -404,14 +404,16 @@ $ifndef RVFI_DII
 function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access . (addr : xlenbits, width : atom('n)) -> bool =
   within_uart (addr, width) | within_clint(addr, width) | (within_htif_readable(addr, width) & 1 <= 'n)
 $else
-function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access . (addr : xlenbits, width : atom('n)) -> bool = false
+function within_mmio_readable forall 'n, 0 < 'n <= max_mem_access . (addr : xlenbits, width : atom('n)) -> bool =
+  within_clint(addr, width)
 $endif
 
 $ifndef RVFI_DII
 function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access . (addr : xlenbits, width : atom('n)) -> bool =
   within_uart (addr, width) | within_clint(addr, width) | (within_htif_writable(addr, width) & 'n <= 8)
 $else
-function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access . (addr : xlenbits, width : atom('n)) -> bool = false
+function within_mmio_writable forall 'n, 0 < 'n <= max_mem_access . (addr : xlenbits, width : atom('n)) -> bool =
+  within_clint(addr, width)
 $endif
 
 /* This is a very minimal UART implementation: just enough to allow a basic

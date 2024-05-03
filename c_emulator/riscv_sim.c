@@ -627,8 +627,8 @@ void init_sail(uint64_t elf_entry)
     rv_ram_size = UINT64_C(0x800000);
     rv_rom_base = UINT64_C(0);
     rv_rom_size = UINT64_C(0);
-    rv_clint_base = UINT64_C(0);
-    rv_clint_size = UINT64_C(0);
+    // rv_clint_base = UINT64_C(0);
+    // rv_clint_size = UINT64_C(0);
     rv_htif_tohost = UINT64_C(0);
     zPC = elf_entry;
   } else
