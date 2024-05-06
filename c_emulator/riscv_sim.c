@@ -1132,7 +1132,7 @@ int main(int argc, char **argv)
 #ifdef RVFI_DII
   uint64_t entry;
   if (rvfi_dii) {
-    entry = 0x80000000;
+    entry = 0x80000080; // Ibex starts at 0x80000080
     int listen_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_sock == -1) {
       fprintf(stderr, "Unable to create socket: %s\n", strerror(errno));
