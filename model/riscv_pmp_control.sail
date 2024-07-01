@@ -9,17 +9,17 @@
 /* address ranges */
 
 // [min, max) of the matching range, in units of 4 bytes.
-type pmp_addr_range_in_words = option((xlenbits, xlenbits))
+type pmp_addr_range_in_words = option((int, int))
 
 function pmpAddrRange(cfg: Pmpcfg_ent, pmpaddr: xlenbits, prev_pmpaddr: xlenbits) -> pmp_addr_range_in_words = {
   match pmpAddrMatchType_of_bits(cfg[A]) {
     OFF   => None(),
-    TOR   => { Some ((prev_pmpaddr, pmpaddr)) },
+    TOR   => { Some ((unsigned(prev_pmpaddr), unsigned(pmpaddr))) },
     NA4   => {
                // NA4 is not selectable when the PMP grain G >= 1. See pmpWriteCfg().
                assert(sys_pmp_grain() < 1, "NA4 cannot be selected when PMP grain G >= 1.");
-               let lo = pmpaddr;
-               Some((lo, lo + 4))
+               let lo = unsigned(pmpaddr);
+               Some((lo, lo + 1))
              },
     NAPOT => {
                // Example pmpaddr: 0b00010101111
@@ -30,8 +30,8 @@ function pmpAddrRange(cfg: Pmpcfg_ent, pmpaddr: xlenbits, prev_pmpaddr: xlenbits
                // ~mask:           0b11111100000
                let lo   = pmpaddr & (~ (mask));
                // mask + 1:        0b00000100000
-               let len  = mask + 1;
-               Some((lo, (lo + len)))
+               let len  = unsigned(mask) + 1;
+               Some((unsigned(lo), (unsigned(lo) + len)))
              }
   }
 }
@@ -63,13 +63,11 @@ function pmpCheckPerms(ent, acc, priv) = {
 
 enum pmpAddrMatch = {PMP_NoMatch, PMP_PartialMatch, PMP_Match}
 
-function pmpMatchAddr(addr: xlenbits, width: xlenbits, rng: pmp_addr_range_in_words) -> pmpAddrMatch = {
+function pmpMatchAddr(addr: int, width: int, rng: pmp_addr_range_in_words) -> pmpAddrMatch = {
   match rng {
     None()         => PMP_NoMatch,
     Some((lo, hi)) => {
       // Convert to integers.
-      let addr  = unsigned(addr);
-      let width = unsigned(width);
       // These are in units of 4 bytes.
       let lo = unsigned(lo) * 4;
       let hi = unsigned(hi) * 4;
@@ -89,7 +87,7 @@ function pmpMatchAddr(addr: xlenbits, width: xlenbits, rng: pmp_addr_range_in_wo
 
 enum pmpMatch = {PMP_Success, PMP_Continue, PMP_Fail}
 
-function pmpMatchEntry(addr: xlenbits, width: xlenbits, acc: AccessType(ext_access_type), priv: Privilege,
+function pmpMatchEntry(addr: int, width: int, acc: AccessType(ext_access_type), priv: Privilege,
                        ent: Pmpcfg_ent, pmpaddr: xlenbits, prev_pmpaddr: xlenbits) -> pmpMatch = {
   let rng = pmpAddrRange(ent, pmpaddr, prev_pmpaddr);
   match pmpMatchAddr(addr, width, rng) {
@@ -111,11 +109,9 @@ function accessToFault(acc : AccessType(ext_access_type)) -> ExceptionType =
     Execute()    => E_Fetch_Access_Fault(),
   }
 
-function pmpCheck forall 'n, 'n > 0. (addr: xlenbits, width: int('n), acc: AccessType(ext_access_type), priv: Privilege)
+function pmpCheck forall 'n, 'n > 0. (addr: int, width: int('n), acc: AccessType(ext_access_type), priv: Privilege)
                   -> option(ExceptionType) = {
-  let width : xlenbits = to_bits(sizeof(xlen), width);
-
-  foreach (i from 0 to 63) {
+  foreach (i from 0 to 3) {
     let prev_pmpaddr = (if i > 0 then pmpReadAddrReg(i - 1) else zeros());
     match pmpMatchEntry(addr, width, acc, priv, pmpcfg_n[i], pmpReadAddrReg(i), prev_pmpaddr) {
       PMP_Success  => { return None(); },
@@ -127,11 +123,6 @@ function pmpCheck forall 'n, 'n > 0. (addr: xlenbits, width: int('n), acc: Acces
 }
 
 function init_pmp() -> unit = {
-  assert(
-    sys_pmp_count() == 0 | sys_pmp_count() == 16 | sys_pmp_count() == 64,
-    "sys_pmp_count() must be 0, 16, or 64"
-  );
-
   foreach (i from 0 to 63) {
     // On reset the PMP register's A and L bits are set to 0 unless the plaform
     // mandates a different value.

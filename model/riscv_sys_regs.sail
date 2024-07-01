@@ -330,7 +330,7 @@ function in32BitMode() -> bool = {
 
 /* F and D extensions have to enabled both via misa.{FD} as well as mstatus.FS */
 function haveFExt()    -> bool = (misa[F] == 0b1) & (mstatus[FS] != 0b00)
-function haveDExt()    -> bool = (misa[D] == 0b1) & (mstatus[FS] != 0b00) & sizeof(flen) >= 64
+function haveDExt()    -> bool = (misa[D] == 0b1) & (mstatus[FS] != 0b00)
 /* Zfh (half-precision) extension depends on misa.F and mstatus.FS */
 function haveZfh()     -> bool = (misa[F] == 0b1) & (mstatus[FS] != 0b00)
 /* V extension has to enable both via misa.V as well as mstatus.VS */
@@ -344,7 +344,7 @@ function haveZcb()     -> bool = sys_enable_zcb()
 /* Zhinx, Zfinx and Zdinx extensions (TODO: gate FCSR access on [mhs]stateen0 bit 1 when implemented) */
 function haveZhinx()   -> bool = sys_enable_zfinx()
 function haveZfinx()   -> bool = sys_enable_zfinx()
-function haveZdinx()   -> bool = sys_enable_zfinx() & sizeof(flen) >= 64
+function haveZdinx()   -> bool = sys_enable_zfinx()
 
 /* interrupt processing state */
 
@@ -858,87 +858,3 @@ function is_fiom_active() -> bool = {
     User => (menvcfg[FIOM] | senvcfg[FIOM]) == 0b1,
   }
 }
-/* vector csrs */
-register vstart : bits(16) /* use the largest possible length of vstart */
-register vxsat  : bits(1)
-register vxrm   : bits(2)
-register vl     : xlenbits
-register vlenb  : xlenbits
-
-bitfield Vtype  : xlenbits = {
-  vill      : xlen - 1,
-  reserved  : xlen - 2 .. 8,
-  vma       : 7,
-  vta       : 6,
-  vsew      : 5 .. 3,
-  vlmul     : 2 .. 0
-}
-register vtype : Vtype
-
-/* the dynamic selected element width (SEW) */
-/* this returns the power of 2 for SEW */
-val get_sew_pow : unit -> {3, 4, 5, 6}
-function get_sew_pow() = {
-  let SEW_pow : {3, 4, 5, 6} = match vtype[vsew] {
-    0b000 => 3,
-    0b001 => 4,
-    0b010 => 5,
-    0b011 => 6,
-    _     => {assert(false, "invalid vsew field in vtype"); 0}
-  };
-  SEW_pow
-}
-/* this returns the actual value of SEW */
-val get_sew : unit -> {8, 16, 32, 64}
-function get_sew() = {
-  match get_sew_pow() {
-    3 => 8,
-    4 => 16,
-    5 => 32,
-    6 => 64,
-    _ => {internal_error(__FILE__, __LINE__, "invalid SEW"); 8}
-  }
-}
-/* this returns the value of SEW in bytes */
-val get_sew_bytes : unit -> {1, 2, 4, 8}
-function get_sew_bytes() = {
-  match get_sew_pow() {
-    3 => 1,
-    4 => 2,
-    5 => 4,
-    6 => 8,
-    _ => {internal_error(__FILE__, __LINE__, "invalid SEW"); 1}
-  }
-}
-
-/* the vector register group multiplier (LMUL) */
-/* this returns the power of 2 for LMUL */
-val get_lmul_pow : unit -> {-3, -2, -1, 0, 1, 2, 3}
-function get_lmul_pow() = {
-  match vtype[vlmul] {
-    0b101 => -3,
-    0b110 => -2,
-    0b111 => -1,
-    0b000 => 0,
-    0b001 => 1,
-    0b010 => 2,
-    0b011 => 3,
-    _     => {assert(false, "invalid vlmul field in vtype"); 0}
-  }
-}
-
-enum agtype = { UNDISTURBED, AGNOSTIC }
-
-val decode_agtype : bits(1) -> agtype
-function decode_agtype(ag) = {
-  match ag {
-    0b0 => UNDISTURBED,
-    0b1 => AGNOSTIC
-  }
-}
-
-val get_vtype_vma : unit -> agtype
-function get_vtype_vma() = decode_agtype(vtype[vma])
-
-val get_vtype_vta : unit -> agtype
-function get_vtype_vta() = decode_agtype(vtype[vta])
