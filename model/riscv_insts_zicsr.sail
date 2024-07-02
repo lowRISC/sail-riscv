@@ -49,11 +49,15 @@ function readCSR csr : csreg -> xlenbits = {
 
     // pmpcfgN
     (0x3A @ idx : bits(4),  _) if idx[0] == bitzero | sizeof(xlen) == 32 => pmpReadCfgReg(unsigned(idx)),
+
     // pmpaddrN. Unfortunately the PMP index does not nicely align with the CSR index bits.
     (0x3B @ idx : bits(4),  _) => pmpReadAddrReg(unsigned(0b00 @ idx)),
     (0x3C @ idx : bits(4),  _) => pmpReadAddrReg(unsigned(0b01 @ idx)),
     (0x3D @ idx : bits(4),  _) => pmpReadAddrReg(unsigned(0b10 @ idx)),
     (0x3E @ idx : bits(4),  _) => pmpReadAddrReg(unsigned(0b11 @ idx)),
+
+    (0x747,  _) => mseccfg.bits(),             // mseccfg
+    (0x757, 32) => mseccfgh,                   // mseccfgh
 
     /* machine mode counters */
     (0xB00,  _) => mcycle[(sizeof(xlen) - 1) .. 0],
@@ -100,6 +104,9 @@ function writeCSR (csr : csreg, value : xlenbits) -> unit = {
       let idx = unsigned(idx);
       pmpWriteCfgReg(idx, value); Some(pmpReadCfgReg(idx))
     },
+
+    (0x747,  _) => { mseccfg = mseccfgWrite(mseccfg, value); Some(mseccfg.bits()) },
+    (0x757, 32) => { Some(mseccfgh) }, // ignore writes for now
 
     // pmpaddrN. Unfortunately the PMP index does not nicely align with the CSR index bits.
     (0x3B @ idx : bits(4),  _) => { let idx = unsigned(0b00 @ idx); pmpWriteAddrReg(idx, value); Some(pmpReadAddrReg(idx)) },
