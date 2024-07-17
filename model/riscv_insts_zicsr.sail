@@ -105,14 +105,14 @@ function writeCSR (csr : csreg, value : xlenbits) -> unit = {
       pmpWriteCfgReg(idx, value); Some(pmpReadCfgReg(idx))
     },
 
-    (0x747,  _) => { mseccfg = mseccfgWrite(mseccfg, value); Some(mseccfg.bits()) },
-    (0x757, 32) => { Some(mseccfgh) }, // ignore writes for now
-
     // pmpaddrN. Unfortunately the PMP index does not nicely align with the CSR index bits.
     (0x3B @ idx : bits(4),  _) => { let idx = unsigned(0b00 @ idx); pmpWriteAddrReg(idx, value); Some(pmpReadAddrReg(idx)) },
     (0x3C @ idx : bits(4),  _) => { let idx = unsigned(0b01 @ idx); pmpWriteAddrReg(idx, value); Some(pmpReadAddrReg(idx)) },
     (0x3D @ idx : bits(4),  _) => { let idx = unsigned(0b10 @ idx); pmpWriteAddrReg(idx, value); Some(pmpReadAddrReg(idx)) },
     (0x3E @ idx : bits(4),  _) => { let idx = unsigned(0b11 @ idx); pmpWriteAddrReg(idx, value); Some(pmpReadAddrReg(idx)) },
+
+    (0x747,  _) => { mseccfg = mseccfgWrite(mseccfg, value); Some(mseccfg.bits()) },
+    (0x757, 32) => { Some(mseccfgh) }, // ignore writes for now
 
     /* machine mode counters */
     (0xB00,  _) => { mcycle[(sizeof(xlen) - 1) .. 0] = value; Some(value) },
