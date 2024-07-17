@@ -175,6 +175,38 @@ bitfield RVFI_DII_Execution_Packet_Ext_MemAccess : bits(704) = {
   rvfi_mem_addr : 703 .. 640,
 }
 
+bitfield RVFI_DII_Execution_Packet_Ext_CHERI : bits(496) = {
+  magic : 63 .. 0, // must be "chericap"
+  /// rvfi_cd_wdata is the value of the c register addressed by cd after
+  /// execution of this instruction. This output must be zero when cd is zero.
+  rvfi_cd_wdata : 191 .. 64,
+  /// rvfi_cs1_rdata/rvfi_cs2_rdata is the value of the c register addressed
+  /// by cs1/cs2 before execution of this instruction. This output must be
+  /// zero when cs1/cs2 is zero.
+  rvfi_cs1_rdata : 319 .. 192,
+  rvfi_cs2_rdata : 447 .. 320,
+  /// rvfi_cd_wdata is the value of the tag bit addressed by cd after
+  /// execution of this instruction. This output must be zero when cd is zero.
+  /// Pad to a whole byte to aid encoding/decoding.
+  rvfi_cd_wtag  : 455 .. 448,
+  /// rvfi_cs1_rtag/rvfi_cs2_rtag is the value of the tag bit addressed
+  /// by cs1/cs2 before execution of this instruction. This output must be
+  /// zero when cs1/cs2 is zero. Pad to a whole byte to aid encoding/decoding.
+  rvfi_cs1_rtag  : 463 .. 456,
+  rvfi_cs2_rtag  : 471 .. 464,
+  /// rvfi_cd_addr is the decoded cd register address for the retired
+  /// instruction. For an instruction that writes no cd register, this output
+  /// must always be zero.
+  rvfi_cd_addr  : 479 .. 472,
+  /// rvfi_cs1_addr and rvfi_cs2_addr are the decoded cs1 and cs2 register
+  /// addresses for the retired instruction. For an instruction that reads no
+  /// cs1/rs2 register, this output can have an arbitrary value. However, if
+  /// this output is nonzero then rvfi_cs1_rdata must carry the value stored
+  /// in that register in the pre-state.
+  rvfi_cs1_addr  : 487 .. 480,
+  rvfi_cs2_addr  : 495 .. 488,
+}
+
 bitfield RVFI_DII_Execution_PacketV2 : bits(512) = {
   magic : 63 .. 0,         // must be set to 'trace-v2'
   trace_size : 127 .. 64,  // total size of the trace packet + extensions
@@ -185,7 +217,7 @@ bitfield RVFI_DII_Execution_PacketV2 : bits(512) = {
   memory_access_data_available: 449, // Followed by R VFI_DII_Execution_Packet_Ext_MemAccess if set
   floating_point_data_available: 450, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_FP if set
   csr_read_write_data_available: 451, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_CSR if set
-  cheri_data_available: 452, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_CHERI if set
+  cheri_data_available: 452, // Followed by RVFI_DII_Execution_Packet_Ext_CHERI if set
   cheri_scr_read_write_data_available: 453, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_CHERI_SCR if set
   trap_data_available: 454, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_Trap if set
   unused_data_available_fields : 511 .. 455, // To be used for additional RVFI_DII_Execution_Packet_Ext_* structs
@@ -197,6 +229,8 @@ register rvfi_int_data : RVFI_DII_Execution_Packet_Ext_Integer
 register rvfi_int_data_present : bool
 register rvfi_mem_data : RVFI_DII_Execution_Packet_Ext_MemAccess
 register rvfi_mem_data_present : bool
+register rvfi_cheri_data : RVFI_DII_Execution_Packet_Ext_CHERI
+register rvfi_cheri_data_present : bool
 
 // Reset the trace
 val rvfi_zero_exec_packet : unit -> unit
@@ -212,6 +246,10 @@ function rvfi_zero_exec_packet () = {
   // magic = "mem-data" -> 0x617461642d6d656d (big-endian)
   rvfi_mem_data = update_magic(rvfi_mem_data, 0x617461642d6d656d);
   rvfi_mem_data_present = false;
+  rvfi_cheri_data = Mk_RVFI_DII_Execution_Packet_Ext_CHERI(zero_extend(0x0));
+  // magic = "chericap" -> 0x7061636972656863 (big-endian)
+  rvfi_cheri_data = update_magic(rvfi_cheri_data, 0x7061636972656863);
+  rvfi_cheri_data_present = false;
 }
 
 // FIXME: most of these will no longer be necessary once we use the c2 sail backend.
@@ -245,12 +283,21 @@ function rvfi_get_exec_packet_v1 () = {
   let v1_packet = update_rvfi_pc_wdata(v1_packet, rvfi_pc_data[rvfi_pc_wdata]);
   let v1_packet = update_rvfi_pc_rdata(v1_packet, rvfi_pc_data[rvfi_pc_rdata]);
 
-  let v1_packet = update_rvfi_rd_addr(v1_packet, rvfi_int_data[rvfi_rd_addr]);
-  let v1_packet = update_rvfi_rs2_addr(v1_packet, rvfi_int_data.rvfi_rs2_addr());
-  let v1_packet = update_rvfi_rs1_addr(v1_packet, rvfi_int_data.rvfi_rs1_addr());
-  let v1_packet = update_rvfi_rd_wdata(v1_packet, rvfi_int_data[rvfi_rd_wdata]);
-  let v1_packet = update_rvfi_rs2_data(v1_packet, rvfi_int_data.rvfi_rs2_rdata());
-  let v1_packet = update_rvfi_rs1_data(v1_packet, rvfi_int_data.rvfi_rs1_rdata());
+  let cheri_xd  = rvfi_cheri_data[rvfi_cd_addr]  != to_bits(8, 0);
+  let cheri_xs1 = rvfi_cheri_data[rvfi_cs1_addr] != to_bits(8, 0);
+  let cheri_xs2 = rvfi_cheri_data[rvfi_cs2_addr] != to_bits(8, 0);
+  let xd_addr  = if cheri_xd  then rvfi_cheri_data[rvfi_cd_addr]  else rvfi_int_data[rvfi_rd_addr];
+  let xs1_addr = if cheri_xs1 then rvfi_cheri_data[rvfi_cs1_addr] else rvfi_int_data[rvfi_rs1_addr];
+  let xs2_addr = if cheri_xs2 then rvfi_cheri_data[rvfi_cs2_addr] else rvfi_int_data[rvfi_rs2_addr];
+  let xd_wdata  = if cheri_xd  then truncate(rvfi_cheri_data[rvfi_cd_wdata],  64) else rvfi_int_data[rvfi_rd_wdata];
+  let xs1_rdata = if cheri_xs1 then truncate(rvfi_cheri_data[rvfi_cs1_rdata], 64) else rvfi_int_data[rvfi_rs1_rdata];
+  let xs2_rdata = if cheri_xs2 then truncate(rvfi_cheri_data[rvfi_cs2_rdata], 64) else rvfi_int_data[rvfi_rs2_rdata];
+  let v1_packet = update_rvfi_rd_addr(v1_packet, xd_addr);
+  let v1_packet = update_rvfi_rs2_addr(v1_packet, xs2_addr);
+  let v1_packet = update_rvfi_rs1_addr(v1_packet, xs1_addr);
+  let v1_packet = update_rvfi_rd_wdata(v1_packet, xd_wdata);
+  let v1_packet = update_rvfi_rs2_data(v1_packet, xs2_rdata);
+  let v1_packet = update_rvfi_rs1_data(v1_packet, xs1_rdata);
 
   let v1_packet = update_rvfi_mem_wmask(v1_packet, truncate(rvfi_mem_data[rvfi_mem_wmask], 8));
   let v1_packet = update_rvfi_mem_rmask(v1_packet, truncate(rvfi_mem_data[rvfi_mem_rmask], 8));
@@ -266,6 +313,7 @@ function rvfi_get_v2_trace_size () = {
   let trace_size : bits(64) = to_bits(64, 512);
   let trace_size = if (rvfi_int_data_present) then trace_size + 320 else trace_size;
   let trace_size = if (rvfi_mem_data_present) then trace_size + 704 else trace_size;
+  let trace_size = if (rvfi_cheri_data_present) then trace_size + 496 else trace_size;
   return trace_size >> 3; // we have to return bytes not bits
 }
 
@@ -279,6 +327,7 @@ function rvfi_get_exec_packet_v2 () = {
   let packet = update_pc_data(packet, rvfi_pc_data.bits);
   let packet = update_integer_data_available(packet, bool_to_bits(rvfi_int_data_present));
   let packet = update_memory_access_data_available(packet, bool_to_bits(rvfi_mem_data_present));
+  let packet = update_cheri_data_available(packet, bool_to_bits(rvfi_cheri_data_present));
   // To simplify the implementation (so that we can return a fixed-size vector)
   // we always return a max-size packet from this function, and the C emulator
   // ensures that only trace_size bits are sent over the socket.
@@ -298,6 +347,12 @@ function rvfi_get_mem_data () = {
   return rvfi_mem_data.bits;
 }
 
+val rvfi_get_cheri_data : unit -> bits(496)
+function rvfi_get_cheri_data () = {
+  assert(rvfi_cheri_data_present, "reading uninitialized data");
+  return rvfi_cheri_data.bits;
+}
+
 val rvfi_encode_width_mask : forall 'n, 0 < 'n <= 32. atom('n) -> bits(32)
 
 function rvfi_encode_width_mask(width) =
@@ -312,6 +367,9 @@ function print_rvfi_exec () = {
   print_bits("rvfi_rd_addr  : ", rvfi_int_data[rvfi_rd_addr]);
   print_bits("rvfi_rs2_addr : ", rvfi_int_data.rvfi_rs2_addr());
   print_bits("rvfi_rs1_addr : ", rvfi_int_data.rvfi_rs1_addr());
+  print_bits("rvfi_cd_addr  : ", rvfi_cheri_data[rvfi_cd_addr]);
+  print_bits("rvfi_cs2_addr : ", rvfi_cheri_data.rvfi_cs2_addr());
+  print_bits("rvfi_cs1_addr : ", rvfi_cheri_data.rvfi_cs1_addr());
   print_bits("rvfi_mem_wmask: ", rvfi_mem_data[rvfi_mem_wmask]);
   print_bits("rvfi_mem_rmask: ", rvfi_mem_data[rvfi_mem_rmask]);
   print_bits("rvfi_mem_wdata: ", rvfi_mem_data[rvfi_mem_wdata]);
@@ -320,6 +378,12 @@ function print_rvfi_exec () = {
   print_bits("rvfi_rd_wdata : ", rvfi_int_data[rvfi_rd_wdata]);
   print_bits("rvfi_rs2_data : ", rvfi_int_data.rvfi_rs2_rdata());
   print_bits("rvfi_rs1_data : ", rvfi_int_data.rvfi_rs1_rdata());
+  print_bits("rvfi_cd_wdata : ", rvfi_cheri_data[rvfi_cd_wdata]);
+  print_bits("rvfi_cs2_data : ", rvfi_cheri_data.rvfi_cs2_rdata());
+  print_bits("rvfi_cs1_data : ", rvfi_cheri_data.rvfi_cs1_rdata());
+  print_bits("rvfi_cd_wtag : ", rvfi_cheri_data[rvfi_cd_wtag]);
+  print_bits("rvfi_cs2_tag : ", rvfi_cheri_data.rvfi_cs2_rtag());
+  print_bits("rvfi_cs1_tag : ", rvfi_cheri_data.rvfi_cs1_rtag());
   print_bits("rvfi_insn     : ", rvfi_inst_data[rvfi_insn]);
   print_bits("rvfi_pc_wdata : ", rvfi_pc_data[rvfi_pc_wdata]);
   print_bits("rvfi_pc_rdata : ", rvfi_pc_data[rvfi_pc_rdata]);

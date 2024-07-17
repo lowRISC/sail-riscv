@@ -37,6 +37,8 @@ extern bool zrvfi_int_data_present;
 void zrvfi_get_int_data(sail_bits *rop, unit);
 extern bool zrvfi_mem_data_present;
 void zrvfi_get_mem_data(sail_bits *rop, unit);
+extern bool zrvfi_cheri_data_present;
+void zrvfi_get_cheri_data(sail_bits *rop, unit);
 mach_bits zrvfi_get_v2_trace_sizze(unit);
 void zrvfi_get_v2_support_packet(sail_bits *rop, unit);
 
