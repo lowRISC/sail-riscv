@@ -646,7 +646,7 @@ function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_WU_S)) = {
 }
 
 function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_S_W)) = {
-  let rs1_val_W = X(rs1) [31..0];
+  let rs1_val_W = X(rs1, rs_1) [31..0];
   match (select_instr_or_fcsr_rm (rm)) {
     None() => { handle_illegal(); RETIRE_FAIL },
     Some(rm') => {
@@ -661,7 +661,7 @@ function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_S_W)) = {
 }
 
 function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_S_WU)) = {
-  let rs1_val_WU = X(rs1) [31..0];
+  let rs1_val_WU = X(rs1, rs_1) [31..0];
   match (select_instr_or_fcsr_rm (rm)) {
     None() => { handle_illegal(); RETIRE_FAIL },
     Some(rm') => {
@@ -709,7 +709,7 @@ function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_LU_S)) = {
 
 function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_S_L)) = {
   assert(sizeof(xlen) >= 64);
-  let rs1_val_L = X(rs1)[63..0];
+  let rs1_val_L = X(rs1, rs_1)[63..0];
   match (select_instr_or_fcsr_rm (rm)) {
     None() => { handle_illegal(); RETIRE_FAIL },
     Some(rm') => {
@@ -725,7 +725,7 @@ function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_S_L)) = {
 
 function clause execute (F_UN_RM_TYPE_S(rs1, rm, rd, FCVT_S_LU)) = {
   assert(sizeof(xlen) >= 64);
-  let rs1_val_LU = X(rs1)[63..0];
+  let rs1_val_LU = X(rs1, rs_1)[63..0];
   match (select_instr_or_fcsr_rm (rm)) {
     None() => { handle_illegal(); RETIRE_FAIL },
     Some(rm') => {
@@ -1060,7 +1060,7 @@ function clause execute (F_UN_TYPE_S(rs1, rd, FMV_X_W)) = {
 }
 
 function clause execute (F_UN_TYPE_S(rs1, rd, FMV_W_X)) = {
-  let rs1_val_X            = X(rs1);
+  let rs1_val_X            = X(rs1, rs_1);
   let rd_val_S             = rs1_val_X [31..0];
   F(rd) = nan_box (rd_val_S);
   RETIRE_SUCCESS

@@ -112,8 +112,8 @@ mapping clause encdec = BTYPE(imm7_6 @ imm5_0 @ imm7_5_0 @ imm5_4_1 @ 0b0, rs2, 
   <-> imm7_6 : bits(1) @ imm7_5_0 : bits(6) @ rs2 @ rs1 @ encdec_bop(op) @ imm5_4_1 : bits(4) @ imm5_0 : bits(1) @ 0b1100011
 
 function clause execute (BTYPE(imm, rs2, rs1, op)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   let taken : bool = match op {
     RISCV_BEQ  => rs1_val == rs2_val,
     RISCV_BNE  => rs1_val != rs2_val,
@@ -171,7 +171,7 @@ mapping clause encdec = ITYPE(imm, rs1, rd, op)
   <-> imm @ rs1 @ encdec_iop(op) @ rd @ 0b0010011
 
 function clause execute (ITYPE (imm, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   let immext : xlenbits = sign_extend(imm);
   let result : xlenbits = match op {
     RISCV_ADDI  => rs1_val + immext,
@@ -211,7 +211,7 @@ mapping clause encdec = SHIFTIOP(shamt, rs1, rd, RISCV_SRLI) <-> 0b000000 @ sham
 mapping clause encdec = SHIFTIOP(shamt, rs1, rd, RISCV_SRAI) <-> 0b010000 @ shamt @ rs1 @ 0b101 @ rd @ 0b0010011 if sizeof(xlen) == 64 | shamt[5] == bitzero
 
 function clause execute (SHIFTIOP(shamt, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   /* the decoder guard should ensure that shamt[5] = 0 for RV32 */
   let result : xlenbits = match op {
     RISCV_SLLI => if   sizeof(xlen) == 32
@@ -252,8 +252,8 @@ mapping clause encdec = RTYPE(rs2, rs1, rd, RISCV_SUB)  <-> 0b0100000 @ rs2 @ rs
 mapping clause encdec = RTYPE(rs2, rs1, rd, RISCV_SRA)  <-> 0b0100000 @ rs2 @ rs1 @ 0b101 @ rd @ 0b0110011
 
 function clause execute (RTYPE(rs2, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   let result : xlenbits = match op {
     RISCV_ADD  => rs1_val + rs2_val,
     RISCV_SLT  => zero_extend(bool_to_bits(rs1_val <_s rs2_val)),
@@ -399,7 +399,7 @@ function clause execute (STORE(imm, rs2, rs1, width, aq, rl)) = {
           match (eares) {
             MemException(e) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
             MemValue(_) => {
-              let rs2_val = X(rs2);
+              let rs2_val = X(rs2, rs_2);
               let res : MemoryOpResult(bool) = match (width) {
                 BYTE => mem_write_value(paddr, 1, rs2_val[7..0],  aq, rl, false),
                 HALF => mem_write_value(paddr, 2, rs2_val[15..0], aq, rl, false),
@@ -432,7 +432,7 @@ mapping clause encdec = ADDIW(imm, rs1, rd)
       if sizeof(xlen) == 64
 
 function clause execute (ADDIW(imm, rs1, rd)) = {
-  let result : xlenbits = sign_extend(imm) + X(rs1);
+  let result : xlenbits = sign_extend(imm) + X(rs1, rs_1);
   X(rd) = sign_extend(result[31..0]);
   RETIRE_SUCCESS
 }
@@ -467,8 +467,8 @@ mapping clause encdec = RTYPEW(rs2, rs1, rd, RISCV_SRAW)
       if sizeof(xlen) == 64
 
 function clause execute (RTYPEW(rs2, rs1, rd, op)) = {
-  let rs1_val = (X(rs1))[31..0];
-  let rs2_val = (X(rs2))[31..0];
+  let rs1_val = (X(rs1, rs_1))[31..0];
+  let rs2_val = (X(rs2, rs_2))[31..0];
   let result : bits(32) = match op {
     RISCV_ADDW => rs1_val + rs2_val,
     RISCV_SUBW => rs1_val - rs2_val,
@@ -510,7 +510,7 @@ mapping clause encdec = SHIFTIWOP(shamt, rs1, rd, RISCV_SRAIW)
       if sizeof(xlen) == 64
 
 function clause execute (SHIFTIWOP(shamt, rs1, rd, op)) = {
-  let rs1_val = (X(rs1))[31..0];
+  let rs1_val = (X(rs1, rs_1))[31..0];
   let result : bits(32) = match op {
     RISCV_SLLIW => rs1_val << shamt,
     RISCV_SRLIW => rs1_val >> shamt,
@@ -779,8 +779,8 @@ mapping clause encdec = SFENCE_VMA(rs1, rs2)
   <-> 0b0001001 @ rs2 @ rs1 @ 0b000 @ 0b00000 @ 0b1110011
 
 function clause execute SFENCE_VMA(rs1, rs2) = {
-  let addr : option(xlenbits) = if rs1 == 0b00000 then None() else Some(X(rs1));
-  let asid : option(xlenbits) = if rs2 == 0b00000 then None() else Some(X(rs2));
+  let addr : option(xlenbits) = if rs1 == 0b00000 then None() else Some(X(rs1, rs_1));
+  let asid : option(xlenbits) = if rs2 == 0b00000 then None() else Some(X(rs2, rs_2));
   match cur_privilege {
     User       => { handle_illegal(); RETIRE_FAIL },
     Supervisor => match (architecture(get_mstatus_SXL(mstatus)), mstatus[TVM]) {

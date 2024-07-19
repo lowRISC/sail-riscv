@@ -16,8 +16,8 @@ mapping clause assembly = RISCV_CLMUL(rs2, rs1, rd)
   <-> "clmul" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 function clause execute (RISCV_CLMUL(rs2, rs1, rd)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   result : xlenbits = zeros();
   foreach (i from 0 to (xlen_val - 1))
     if rs2_val[i] == bitone then result = result ^ (rs1_val << i);
@@ -35,8 +35,8 @@ mapping clause assembly = RISCV_CLMULH(rs2, rs1, rd)
   <-> "clmulh" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 function clause execute (RISCV_CLMULH(rs2, rs1, rd)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   result : xlenbits = zeros();
   foreach (i from 0 to (xlen_val - 1))
     if rs2_val[i] == bitone then result = result ^ (rs1_val >> (xlen_val - i));
@@ -54,8 +54,8 @@ mapping clause assembly = RISCV_CLMULR(rs2, rs1, rd)
   <-> "clmulr" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 function clause execute (RISCV_CLMULR(rs2, rs1, rd)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   result : xlenbits = zeros();
   foreach (i from 0 to (xlen_val - 1))
     if rs2_val[i] == bitone then result = result ^ (rs1_val >> (xlen_val - i - 1));

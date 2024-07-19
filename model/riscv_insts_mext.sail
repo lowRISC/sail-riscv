@@ -26,8 +26,8 @@ mapping clause encdec = MUL(rs2, rs1, rd, high, signed1, signed2)
 
 function clause execute (MUL(rs2, rs1, rd, high, signed1, signed2)) = {
   if haveMulDiv() | haveZmmul() then {
-    let rs1_val = X(rs1);
-    let rs2_val = X(rs2);
+    let rs1_val = X(rs1, rs_1);
+    let rs2_val = X(rs2, rs_2);
     let rs1_int : int = if signed1 then signed(rs1_val) else unsigned(rs1_val);
     let rs2_int : int = if signed2 then signed(rs2_val) else unsigned(rs2_val);
     let result_wide = to_bits(2 * sizeof(xlen), rs1_int * rs2_int);
@@ -60,8 +60,8 @@ mapping clause encdec = DIV(rs2, rs1, rd, s)
 
 function clause execute (DIV(rs2, rs1, rd, s)) = {
   if haveMulDiv() then {
-    let rs1_val = X(rs1);
-    let rs2_val = X(rs2);
+    let rs1_val = X(rs1, rs_1);
+    let rs2_val = X(rs2, rs_2);
     let rs1_int : int = if s then signed(rs1_val) else unsigned(rs1_val);
     let rs2_int : int = if s then signed(rs2_val) else unsigned(rs2_val);
     let q : int = if rs2_int == 0 then -1 else quot_round_zero(rs1_int, rs2_int);
@@ -91,8 +91,8 @@ mapping clause encdec = REM(rs2, rs1, rd, s)
 
 function clause execute (REM(rs2, rs1, rd, s)) = {
   if haveMulDiv() then {
-    let rs1_val = X(rs1);
-    let rs2_val = X(rs2);
+    let rs1_val = X(rs1, rs_1);
+    let rs2_val = X(rs2, rs_2);
     let rs1_int : int = if s then signed(rs1_val) else unsigned(rs1_val);
     let rs2_int : int = if s then signed(rs2_val) else unsigned(rs2_val);
     let r : int = if rs2_int == 0 then rs1_int else rem_round_zero(rs1_int, rs2_int);
@@ -118,8 +118,8 @@ mapping clause encdec = MULW(rs2, rs1, rd)
 
 function clause execute (MULW(rs2, rs1, rd)) = {
   if haveMulDiv() | haveZmmul() then {
-    let rs1_val = X(rs1)[31..0];
-    let rs2_val = X(rs2)[31..0];
+    let rs1_val = X(rs1, rs_1)[31..0];
+    let rs2_val = X(rs2, rs_2)[31..0];
     let rs1_int : int = signed(rs1_val);
     let rs2_int : int = signed(rs2_val);
     /* to_bits requires expansion to 64 bits followed by truncation */
@@ -148,8 +148,8 @@ mapping clause encdec = DIVW(rs2, rs1, rd, s)
 
 function clause execute (DIVW(rs2, rs1, rd, s)) = {
   if haveMulDiv() then {
-    let rs1_val = X(rs1)[31..0];
-    let rs2_val = X(rs2)[31..0];
+    let rs1_val = X(rs1, rs_1)[31..0];
+    let rs2_val = X(rs2, rs_2)[31..0];
     let rs1_int : int = if s then signed(rs1_val) else unsigned(rs1_val);
     let rs2_int : int = if s then signed(rs2_val) else unsigned(rs2_val);
     let q : int = if rs2_int == 0 then -1 else quot_round_zero(rs1_int, rs2_int);
@@ -178,8 +178,8 @@ mapping clause encdec = REMW(rs2, rs1, rd, s)
 
 function clause execute (REMW(rs2, rs1, rd, s)) = {
   if haveMulDiv() then {
-    let rs1_val = X(rs1)[31..0];
-    let rs2_val = X(rs2)[31..0];
+    let rs1_val = X(rs1, rs_1)[31..0];
+    let rs2_val = X(rs2, rs_2)[31..0];
     let rs1_int : int = if s then signed(rs1_val) else unsigned(rs1_val);
     let rs2_int : int = if s then signed(rs2_val) else unsigned(rs2_val);
     let r : int = if rs2_int == 0 then rs1_int else rem_round_zero(rs1_int, rs2_int);

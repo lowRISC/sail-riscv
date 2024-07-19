@@ -16,7 +16,7 @@ mapping clause assembly = RISCV_RORIW(shamt, rs1, rd)
   <-> "roriw" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ hex_bits_5(shamt)
 
 function clause execute (RISCV_RORIW(shamt, rs1, rd)) = {
-  let rs1_val = (X(rs1))[31..0];
+  let rs1_val = (X(rs1, rs_1))[31..0];
   let result : xlenbits = sign_extend(rs1_val >>> shamt);
   X(rd) = result;
   RETIRE_SUCCESS
@@ -32,7 +32,7 @@ mapping clause assembly = RISCV_RORI(shamt, rs1, rd)
   <-> "rori" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ hex_bits_6(shamt)
 
 function clause execute (RISCV_RORI(shamt, rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   let result : xlenbits = if sizeof(xlen) == 32
                           then rs1_val >>> shamt[4..0]
                           else rs1_val >>> shamt;
@@ -58,8 +58,8 @@ mapping clause assembly = ZBB_RTYPEW(rs2, rs1, rd, op)
   <-> zbb_rtypew_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 function clause execute (ZBB_RTYPEW(rs2, rs1, rd, op)) = {
-  let rs1_val = (X(rs1))[31..0];
-  let shamt = (X(rs2))[4..0];
+  let rs1_val = (X(rs1, rs_1))[31..0];
+  let shamt = (X(rs2, rs_2))[4..0];
   let result : bits(32) = match op {
     RISCV_ROLW => rs1_val <<< shamt,
     RISCV_RORW => rs1_val >>> shamt
@@ -114,8 +114,8 @@ mapping clause assembly = ZBB_RTYPE(rs2, rs1, rd, op)
   <-> zbb_rtype_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 function clause execute (ZBB_RTYPE(rs2, rs1, rd, op)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   let result : xlenbits = match op {
     RISCV_ANDN => rs1_val & ~(rs2_val),
     RISCV_ORN  => rs1_val | ~(rs2_val),
@@ -160,7 +160,7 @@ mapping clause assembly = ZBB_EXTOP(rs1, rd, op)
   <-> zbb_extop_mnemonic(op) ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (ZBB_EXTOP(rs1, rd, op)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   let result : xlenbits = match op {
     RISCV_SEXTB => sign_extend(rs1_val[7..0]),
     RISCV_SEXTH => sign_extend(rs1_val[15..0]),
@@ -183,7 +183,7 @@ mapping clause assembly = RISCV_REV8(rs1, rd)
   <-> "rev8" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_REV8(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : xlenbits = zeros();
   foreach (i from 0 to (sizeof(xlen) - 8) by 8)
     result[(i + 7) .. i] = rs1_val[(sizeof(xlen) - i - 1) .. (sizeof(xlen) - i - 8)];
@@ -201,7 +201,7 @@ mapping clause assembly = RISCV_ORCB(rs1, rd)
   <-> "orc.b" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_ORCB(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : xlenbits = zeros();
   foreach (i from 0 to (sizeof(xlen) - 8) by 8)
     result[(i + 7) .. i] = if rs1_val[(i + 7) .. i] == zeros()
@@ -221,7 +221,7 @@ mapping clause assembly = RISCV_CPOP(rs1, rd)
   <-> "cpop" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_CPOP(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : nat = 0;
   foreach (i from 0 to (xlen_val - 1))
     if rs1_val[i] == bitone then result = result + 1;
@@ -239,7 +239,7 @@ mapping clause assembly = RISCV_CPOPW(rs1, rd)
   <-> "cpopw" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_CPOPW(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : nat = 0;
   foreach (i from 0 to 31)
     if rs1_val[i] == bitone then result = result + 1;
@@ -257,7 +257,7 @@ mapping clause assembly = RISCV_CLZ(rs1, rd)
   <-> "clz" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_CLZ(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : nat = 0;
   done : bool = false;
   foreach (i from (sizeof(xlen) - 1) downto 0)
@@ -278,7 +278,7 @@ mapping clause assembly = RISCV_CLZW(rs1, rd)
   <-> "clzw" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_CLZW(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : nat = 0;
   done : bool = false;
   foreach (i from 31 downto 0)
@@ -299,7 +299,7 @@ mapping clause assembly = RISCV_CTZ(rs1, rd)
   <-> "ctz" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_CTZ(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : nat = 0;
   done : bool = false;
   foreach (i from 0 to (sizeof(xlen) - 1))
@@ -320,7 +320,7 @@ mapping clause assembly = RISCV_CTZW(rs1, rd)
   <-> "ctzw" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1)
 
 function clause execute (RISCV_CTZW(rs1, rd)) = {
-  let rs1_val = X(rs1);
+  let rs1_val = X(rs1, rs_1);
   result : nat = 0;
   done : bool = false;
   foreach (i from 0 to 31)

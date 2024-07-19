@@ -66,7 +66,7 @@ function clause execute VSET_TYPE(op, ma, ta, sew, lmul, rs1, rd) = {
     },
     VSETVL  => {
       let rs2 : regidx = sew[1 .. 0] @ lmul;
-      vtype.bits = X(rs2)
+      vtype.bits = X(rs2, rs_2)
     }
   };
 
@@ -87,7 +87,7 @@ function clause execute VSET_TYPE(op, ma, ta, sew, lmul, rs1, rd) = {
 
   /* set vl according to VLMAX and AVL */
   if (rs1 != 0b00000) then { /* normal stripmining */
-    let rs1_val = X(rs1);
+    let rs1_val = X(rs1, rs_1);
     let AVL = unsigned(rs1_val);
     vl = if AVL <= VLMAX then to_bits(sizeof(xlen), AVL)
          else if AVL < 2 * VLMAX then to_bits(sizeof(xlen), (AVL + 1) / 2)

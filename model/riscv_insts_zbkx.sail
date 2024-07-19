@@ -16,8 +16,8 @@ mapping clause assembly = RISCV_XPERM8(rs2, rs1, rd)
   <-> "xperm8" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 function clause execute (RISCV_XPERM8(rs2, rs1, rd)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   result : xlenbits = zeros();
   foreach (i from 0 to (sizeof(xlen) - 8) by 8) {
     let index = unsigned(rs2_val[i+7..i]);
@@ -39,8 +39,8 @@ mapping clause assembly = RISCV_XPERM4(rs2, rs1, rd)
   <-> "xperm4" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 function clause execute (RISCV_XPERM4(rs2, rs1, rd)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  let rs1_val = X(rs1, rs_1);
+  let rs2_val = X(rs2, rs_2);
   result : xlenbits = zeros();
   foreach (i from 0 to (sizeof(xlen) - 4) by 4) {
     let index = unsigned(rs2_val[i+3..i]);

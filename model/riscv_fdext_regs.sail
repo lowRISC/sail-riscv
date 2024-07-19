@@ -262,7 +262,7 @@ function rF_or_X_H(i) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then F_H(i)
-  else X(i)[15..0]
+  else X(i, rs_na)[15..0]
 }
 
 val rF_or_X_S : bits(5) -> bits(32)
@@ -271,7 +271,7 @@ function rF_or_X_S(i) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then F_S(i)
-  else X(i)[31..0]
+  else X(i, rs_na)[31..0]
 }
 
 val rF_or_X_D : bits(5) -> bits(64)
@@ -281,10 +281,10 @@ function rF_or_X_D(i) = {
   if   sys_enable_fdext()
   then F_D(i)
   else if sizeof(xlen) >= 64
-  then X(i)[63..0]
+  then X(i, rs_na)[63..0]
   else {
     assert(i[0] == bitzero);
-    if i == zeros() then zeros() else X(i + 1) @ X(i)
+    if i == zeros() then zeros() else X(i + 1) @ X(i, rs_na)
   }
 }
 
@@ -294,7 +294,7 @@ function wF_or_X_H(i, data) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then F_H(i) = data
-  else X(i) = sign_extend(data)
+  else X(i, rs_na) = sign_extend(data)
 }
 
 val wF_or_X_S : (bits(5), bits(32)) -> unit
@@ -303,7 +303,7 @@ function wF_or_X_S(i, data) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then F_S(i) = data
-  else X(i) = sign_extend(data)
+  else X(i, rs_na) = sign_extend(data)
 }
 
 val wF_or_X_D : (bits(5), bits(64)) -> unit
@@ -313,11 +313,11 @@ function wF_or_X_D(i, data) = {
   if   sys_enable_fdext()
   then F_D(i) = data
   else if sizeof(xlen) >= 64
-  then X(i) = sign_extend(data)
+  then X(i, rs_na) = sign_extend(data)
   else {
     assert (i[0] == bitzero);
     if i != zeros() then {
-      X(i)     = data[31..0];
+      X(i, rs_na)     = data[31..0];
       X(i + 1) = data[63..32];
     }
   }

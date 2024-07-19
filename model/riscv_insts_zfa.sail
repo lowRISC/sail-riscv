@@ -532,8 +532,8 @@ mapping clause assembly = RISCV_FMVP_D_X(rs2, rs1, rd)
                  ^ sep() ^ reg_name(rs2)
 
 function clause execute (RISCV_FMVP_D_X(rs2, rs1, rd)) = {
-  let rs1_val_X     = X(rs1)[31..0];
-  let rs2_val_X     = X(rs2)[31..0];
+  let rs1_val_X     = X(rs1, rs_1)[31..0];
+  let rs2_val_X     = X(rs2, rs_2)[31..0];
 
   /* Concatenate the two values using '@' operator */
   /* e.g. */

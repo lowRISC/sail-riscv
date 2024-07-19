@@ -678,7 +678,7 @@ function clause execute(VXSG(funct6, vm, vs2, rs1, vd)) = {
   let 'm = SEW;
 
   let vm_val  : vector('n, dec, bool)     = read_vmask(num_elem, vm, 0b00000);
-  let rs1_val : nat                       = unsigned(X(rs1));
+  let rs1_val : nat                       = unsigned(X(rs1, rs_1));
   let vs2_val : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vs2);
   let vd_val  : vector('n, dec, bits('m)) = read_vreg(num_elem, SEW, LMUL_pow, vd);
   result      : vector('n, dec, bits('m)) = undefined;

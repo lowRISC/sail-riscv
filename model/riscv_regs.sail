@@ -32,8 +32,26 @@ register x13 : regtype
 register x14 : regtype
 register x15 : regtype
 
-val rX : forall 'n, 0 <= 'n < 32. regno('n) -> xlenbits
-function rX r = {
+$ifdef RVFI_DII
+val rvfi_rX : forall 'n, 0 <= 'n < 32. (regno('n), regor, xlenbits) -> unit
+function rvfi_rX (r,o,v) = {
+  if (o == rs_1) then {
+    rvfi_int_data[rvfi_rs1_addr]  = to_bits(8,r);
+    rvfi_int_data[rvfi_rs1_rdata] = zero_extend(v);
+  };
+  if (o == rs_2) then {
+    rvfi_int_data[rvfi_rs2_addr]  = to_bits(8,r);
+    rvfi_int_data[rvfi_rs2_rdata] = zero_extend(v);
+  };
+  rvfi_int_data_present = true;
+}
+$else
+val rvfi_rX : forall 'n, 0 <= 'n < 32. (regno('n), bool, xlenbits) -> unit
+function rvfi_rX (r,o,v) = ()
+$endif
+
+val rX : forall 'n, 0 <= 'n < 32. (regno('n), regor) -> xlenbits
+function rX (r,o) = {
   let v : regtype =
     match r {
       0 => zero_reg,
@@ -54,6 +72,9 @@ function rX r = {
       15 => x15,
       _  => throw Error_not_rv32e_register()
     };
+  if (r != 0) then {
+    rvfi_rX(r, o, regval_from_reg(v));
+  };
   regval_from_reg(v)
 }
 
@@ -98,7 +119,7 @@ function wX (r, in_v) = {
   }
 }
 
-function rX_bits(i: bits(5)) -> xlenbits = rX(unsigned(i))
+function rX_bits(i: bits(5), o: regor) -> xlenbits = rX(unsigned(i), o)
 
 function wX_bits(i: bits(5), data: xlenbits) -> unit = {
   wX(unsigned(i)) = data

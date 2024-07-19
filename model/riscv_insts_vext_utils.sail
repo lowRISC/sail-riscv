@@ -215,10 +215,10 @@ val get_scalar : forall 'm, 'm >= 8. (regidx, int('m)) -> bits('m)
 function get_scalar(rs1, SEW) = {
   if SEW <= sizeof(xlen) then {
     /* Least significant SEW bits */
-    X(rs1)[SEW - 1 .. 0]
+    X(rs1, rs_1)[SEW - 1 .. 0]
   } else {
     /* Sign extend to SEW */
-    sign_extend(SEW, X(rs1))
+    sign_extend(SEW, X(rs1, rs_1))
   }
 }
 

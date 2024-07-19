@@ -160,7 +160,7 @@ function clause execute (STORECON(aq, rl, rs2, rs1, width, rd)) = {
                   match (eares) {
                     MemException(e) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
                     MemValue(_) => {
-                      rs2_val = X(rs2);
+                      rs2_val = X(rs2, rs_2);
                       let res : MemoryOpResult(bool) = match (width, sizeof(xlen)) {
                         (BYTE, _)    => mem_write_value(addr, 1, rs2_val[7..0], aq & rl, rl, true),
                         (HALF, _)    => mem_write_value(addr, 2, rs2_val[15..0], aq & rl, rl, true),
@@ -235,10 +235,10 @@ function clause execute (AMO(op, aq, rl, rs2, rs1, width, rd)) = {
               _       => false
             };
             let rs2_val : xlenbits = match width {
-              BYTE   => if is_unsigned then zero_extend(X(rs2)[7..0])  else sign_extend(X(rs2)[7..0]),
-              HALF   => if is_unsigned then zero_extend(X(rs2)[15..0]) else sign_extend(X(rs2)[15..0]),
-              WORD   => if is_unsigned then zero_extend(X(rs2)[31..0]) else sign_extend(X(rs2)[31..0]),
-              DOUBLE => X(rs2)
+              BYTE   => if is_unsigned then zero_extend(X(rs2, rs_2)[7..0])  else sign_extend(X(rs2, rs_2)[7..0]),
+              HALF   => if is_unsigned then zero_extend(X(rs2, rs_2)[15..0]) else sign_extend(X(rs2, rs_2)[15..0]),
+              WORD   => if is_unsigned then zero_extend(X(rs2, rs_2)[31..0]) else sign_extend(X(rs2, rs_2)[31..0]),
+              DOUBLE => X(rs2, rs_2)
             };
             match (eares) {
               MemException(e) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },

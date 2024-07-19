@@ -33,6 +33,9 @@ type regno ('n : Int), 0 <= 'n < 32 = atom('n)
 val regidx_to_regno : bits(5) -> {'n, 0 <= 'n < 32. regno('n)}
 function regidx_to_regno b = let 'r = unsigned(b) in r
 
+/* register read index origin - RS1, RS2, N/A - to aid RVFI */
+enum regor = rs_1 | rs_2 | rs_na
+
 /* mapping RVC register indices into normal indices */
 val creg2reg_idx : cregidx -> regidx
 function creg2reg_idx(creg) = 0b01 @ creg
