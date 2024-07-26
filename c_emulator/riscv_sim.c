@@ -86,7 +86,7 @@ bool config_print_mem_access = false;
 bool config_print_platform = false;
 bool config_print_rvfi = false;
 bool config_print_exception = false;
-int config_use_boot_rom = 
+int config_use_boot_rom =
 #ifdef NO_BOOT_ROM
 false
 #else
@@ -853,6 +853,8 @@ void rvfi_send_trace(unsigned version)
       get_and_send_rvfi_packet(zrvfi_get_int_data);
     if (zrvfi_mem_data_present)
       get_and_send_rvfi_packet(zrvfi_get_mem_data);
+    if (zrvfi_csr_data_present)
+      get_and_send_rvfi_packet(zrvfi_get_csr_data);
     if (zrvfi_cheri_data_present)
       get_and_send_rvfi_packet(zrvfi_get_cheri_data);
   } else {

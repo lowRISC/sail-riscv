@@ -175,6 +175,21 @@ bitfield RVFI_DII_Execution_Packet_Ext_MemAccess : bits(704) = {
   rvfi_mem_addr : 703 .. 640,
 }
 
+bitfield RVFI_DII_Execution_Packet_Ext_CSR : bits(208) = {
+  magic : 63 .. 0, // must be "csr-data"
+  /// rvfi_csr_rdata is the value of the control/status register addressed
+  /// by csr before the execution of this instruction.
+  /// This output must be zero when rd is zero.
+  rvfi_csr_rdata : 127 .. 64,
+  /// rvfi_csr_wdata is the value of the control/status register addressed
+  /// by csr after the execution of this instruction.
+  /// This output must be zero when rs1 or uimm is zero.
+  rvfi_csr_wdata : 191 .. 128,
+  /// rvfi_csr_addr is the decoded control/status register address
+  /// for the retired instruction, zero-extended to 16-bits.
+  rvfi_csr_addr : 207 .. 192,
+}
+
 bitfield RVFI_DII_Execution_Packet_Ext_CHERI : bits(496) = {
   magic : 63 .. 0, // must be "chericap"
   /// rvfi_cd_wdata is the value of the c register addressed by cd after
@@ -216,7 +231,7 @@ bitfield RVFI_DII_Execution_PacketV2 : bits(512) = {
   integer_data_available: 448, // Followed by RVFI_DII_Execution_Packet_Ext_Integer if set
   memory_access_data_available: 449, // Followed by R VFI_DII_Execution_Packet_Ext_MemAccess if set
   floating_point_data_available: 450, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_FP if set
-  csr_read_write_data_available: 451, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_CSR if set
+  csr_read_write_data_available: 451, // Followed by RVFI_DII_Execution_Packet_Ext_CSR if set
   cheri_data_available: 452, // Followed by RVFI_DII_Execution_Packet_Ext_CHERI if set
   cheri_scr_read_write_data_available: 453, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_CHERI_SCR if set
   trap_data_available: 454, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_Trap if set
@@ -229,6 +244,8 @@ register rvfi_int_data : RVFI_DII_Execution_Packet_Ext_Integer
 register rvfi_int_data_present : bool
 register rvfi_mem_data : RVFI_DII_Execution_Packet_Ext_MemAccess
 register rvfi_mem_data_present : bool
+register rvfi_csr_data : RVFI_DII_Execution_Packet_Ext_CSR
+register rvfi_csr_data_present : bool
 register rvfi_cheri_data : RVFI_DII_Execution_Packet_Ext_CHERI
 register rvfi_cheri_data_present : bool
 
@@ -237,15 +254,24 @@ val rvfi_zero_exec_packet : unit -> unit
 
 function rvfi_zero_exec_packet () = {
   rvfi_inst_data = Mk_RVFI_DII_Execution_Packet_InstMetaData(zero_extend(0b0));
+
   rvfi_pc_data = Mk_RVFI_DII_Execution_Packet_PC(zero_extend(0b0));
+
   rvfi_int_data = Mk_RVFI_DII_Execution_Packet_Ext_Integer(zero_extend(0x0));
   // magic = "int-data" -> 0x617461642d746e69 (big-endian)
   rvfi_int_data = update_magic(rvfi_int_data, 0x617461642d746e69);
   rvfi_int_data_present = false;
+
   rvfi_mem_data = Mk_RVFI_DII_Execution_Packet_Ext_MemAccess(zero_extend(0x0));
   // magic = "mem-data" -> 0x617461642d6d656d (big-endian)
   rvfi_mem_data = update_magic(rvfi_mem_data, 0x617461642d6d656d);
   rvfi_mem_data_present = false;
+
+  rvfi_csr_data = Mk_RVFI_DII_Execution_Packet_Ext_CSR(zero_extend(0x0));
+  // magic = "csr-data" -> 0x617461642d727363 (big-endian)
+  rvfi_csr_data = update_magic(rvfi_csr_data, 0x617461642d727363);
+  rvfi_csr_data_present = false;
+
   rvfi_cheri_data = Mk_RVFI_DII_Execution_Packet_Ext_CHERI(zero_extend(0x0));
   // magic = "chericap" -> 0x7061636972656863 (big-endian)
   rvfi_cheri_data = update_magic(rvfi_cheri_data, 0x7061636972656863);
@@ -313,6 +339,7 @@ function rvfi_get_v2_trace_size () = {
   let trace_size : bits(64) = to_bits(64, 512);
   let trace_size = if (rvfi_int_data_present) then trace_size + 320 else trace_size;
   let trace_size = if (rvfi_mem_data_present) then trace_size + 704 else trace_size;
+  let trace_size = if (rvfi_csr_data_present) then trace_size + 208 else trace_size;
   let trace_size = if (rvfi_cheri_data_present) then trace_size + 496 else trace_size;
   return trace_size >> 3; // we have to return bytes not bits
 }
@@ -327,6 +354,7 @@ function rvfi_get_exec_packet_v2 () = {
   let packet = update_pc_data(packet, rvfi_pc_data.bits);
   let packet = update_integer_data_available(packet, bool_to_bits(rvfi_int_data_present));
   let packet = update_memory_access_data_available(packet, bool_to_bits(rvfi_mem_data_present));
+  let packet = update_csr_read_write_data_available(packet, bool_to_bits(rvfi_csr_data_present));
   let packet = update_cheri_data_available(packet, bool_to_bits(rvfi_cheri_data_present));
   // To simplify the implementation (so that we can return a fixed-size vector)
   // we always return a max-size packet from this function, and the C emulator
@@ -347,6 +375,12 @@ function rvfi_get_mem_data () = {
   return rvfi_mem_data.bits;
 }
 
+val rvfi_get_csr_data : unit -> bits(208)
+function rvfi_get_csr_data () = {
+  assert(rvfi_csr_data_present, "reading uninitialized data");
+  return rvfi_csr_data.bits;
+}
+
 val rvfi_get_cheri_data : unit -> bits(496)
 function rvfi_get_cheri_data () = {
   assert(rvfi_cheri_data_present, "reading uninitialized data");
@@ -364,6 +398,9 @@ function print_rvfi_exec () = {
   print_bits("rvfi_intr     : ", rvfi_inst_data[rvfi_intr]);
   print_bits("rvfi_halt     : ", rvfi_inst_data[rvfi_halt]);
   print_bits("rvfi_trap     : ", rvfi_inst_data[rvfi_trap]);
+  print_bits("rvfi_csr_addr : ", rvfi_csr_data[rvfi_csr_addr]);
+  print_bits("rvfi_csr_wdata: ", rvfi_csr_data[rvfi_csr_wdata]);
+  print_bits("rvfi_csr_rdata: ", rvfi_csr_data[rvfi_csr_rdata]);
   print_bits("rvfi_rd_addr  : ", rvfi_int_data[rvfi_rd_addr]);
   print_bits("rvfi_rs2_addr : ", rvfi_int_data.rvfi_rs2_addr());
   print_bits("rvfi_rs1_addr : ", rvfi_int_data.rvfi_rs1_addr());

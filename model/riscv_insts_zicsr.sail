@@ -190,6 +190,30 @@ function writeCSR (csr : csreg, value : xlenbits) -> unit = {
   }
 }
 
+$ifdef RVFI_DII
+val rvfi_rCSR : (csreg, xlenbits) -> unit
+function rvfi_rCSR (r,v) = {
+  rvfi_csr_data[rvfi_csr_addr]  = zero_extend(r);
+  rvfi_csr_data[rvfi_csr_rdata] = zero_extend(v);
+  rvfi_csr_data_present = true;
+}
+$else
+val rvfi_rCSR : (csreg, xlenbits) -> unit
+function rvfi_rCSR (r,v) = ()
+$endif
+
+$ifdef RVFI_DII
+val rvfi_wCSR : (csreg, xlenbits) -> unit
+function rvfi_wCSR (r,v) = {
+  rvfi_csr_data[rvfi_csr_addr]  = zero_extend(r);
+  rvfi_csr_data[rvfi_csr_wdata] = zero_extend(v);
+  rvfi_csr_data_present = true;
+}
+$else
+val rvfi_wCSR : (csreg, xlenbits) -> unit
+function rvfi_wCSR (r,v) = ()
+$endif
+
 function clause execute CSR(csr, rs1, rd, is_imm, op) = {
   let rs1_val : xlenbits = if is_imm then zero_extend(rs1) else X(rs1, rs_1);
   let isWrite : bool = match op {
@@ -202,13 +226,17 @@ function clause execute CSR(csr, rs1, rd, is_imm, op) = {
   then { ext_check_CSR_fail(); RETIRE_FAIL }
   else {
     let csr_val = readCSR(csr); /* could have side-effects, so technically shouldn't perform for CSRW[I] with rd == 0 */
+    if (unsigned(rd) != 0) then {
+      rvfi_rCSR(csr, csr_val);
+    };
     if isWrite then {
       let new_val : xlenbits = match op {
         CSRRW => rs1_val,
         CSRRS => csr_val | rs1_val,
         CSRRC => csr_val & ~(rs1_val)
       };
-      writeCSR(csr, new_val)
+      writeCSR(csr, new_val);
+      rvfi_wCSR(csr, new_val); /* call without further checks as rs1!=0 and imm!=0 checks already done for isWrite */
     };
     X(rd) = csr_val;
     RETIRE_SUCCESS
