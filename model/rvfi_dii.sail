@@ -130,11 +130,11 @@ bitfield RVFI_DII_Execution_Packet_PC : bits(128) = {
 bitfield RVFI_DII_Execution_Packet_Ext_Integer : bits(320) = {
   magic : 63 .. 0, // must be "int-data"
   /// rvfi_rd_wdata is the value of the x register addressed by rd after
-  /// execution of this instruction. This output must be zero when rd is zero.
+  /// execution of this instruction. This output must be zero when rd is x0.
   rvfi_rd_wdata  : 127 ..  64,
   /// rvfi_rs1_rdata/rvfi_rs2_rdata is the value of the x register addressed
   /// by rs1/rs2 before execution of this instruction. This output must be
-  /// zero when rs1/rs2 is zero.
+  /// zero when rs1/rs2 is x0.
   rvfi_rs1_rdata  : 191 .. 128,
   rvfi_rs2_rdata  : 255 .. 192,
   /// rvfi_rd_addr is the decoded rd register address for the retired
@@ -179,11 +179,11 @@ bitfield RVFI_DII_Execution_Packet_Ext_CSR : bits(208) = {
   magic : 63 .. 0, // must be "csr-data"
   /// rvfi_csr_rdata is the value of the control/status register addressed
   /// by csr before the execution of this instruction.
-  /// This output must be zero when rd is zero.
+  /// This output must be zero when rd is x0.
   rvfi_csr_rdata : 127 .. 64,
   /// rvfi_csr_wdata is the value of the control/status register addressed
   /// by csr after the execution of this instruction.
-  /// This output must be zero when rs1 or uimm is zero.
+  /// This output must be zero when rs1 is x0 or uimm is zero.
   rvfi_csr_wdata : 191 .. 128,
   /// rvfi_csr_addr is the decoded control/status register address
   /// for the retired instruction, zero-extended to 16-bits.
@@ -193,20 +193,20 @@ bitfield RVFI_DII_Execution_Packet_Ext_CSR : bits(208) = {
 bitfield RVFI_DII_Execution_Packet_Ext_CHERI : bits(496) = {
   magic : 63 .. 0, // must be "chericap"
   /// rvfi_cd_wdata is the value of the c register addressed by cd after
-  /// execution of this instruction. This output must be zero when cd is zero.
+  /// execution of this instruction. This output must be zero when cd is c0.
   rvfi_cd_wdata : 191 .. 64,
   /// rvfi_cs1_rdata/rvfi_cs2_rdata is the value of the c register addressed
   /// by cs1/cs2 before execution of this instruction. This output must be
-  /// zero when cs1/cs2 is zero.
+  /// zero when cs1/cs2 is c0.
   rvfi_cs1_rdata : 319 .. 192,
   rvfi_cs2_rdata : 447 .. 320,
   /// rvfi_cd_wdata is the value of the tag bit addressed by cd after
-  /// execution of this instruction. This output must be zero when cd is zero.
+  /// execution of this instruction. This output must be zero when cd is c0.
   /// Pad to a whole byte to aid encoding/decoding.
   rvfi_cd_wtag  : 455 .. 448,
   /// rvfi_cs1_rtag/rvfi_cs2_rtag is the value of the tag bit addressed
   /// by cs1/cs2 before execution of this instruction. This output must be
-  /// zero when cs1/cs2 is zero. Pad to a whole byte to aid encoding/decoding.
+  /// zero when cs1/cs2 is c0. Pad to a whole byte to aid encoding/decoding.
   rvfi_cs1_rtag  : 463 .. 456,
   rvfi_cs2_rtag  : 471 .. 464,
   /// rvfi_cd_addr is the decoded cd register address for the retired
