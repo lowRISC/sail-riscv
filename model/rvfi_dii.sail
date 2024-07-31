@@ -222,6 +222,30 @@ bitfield RVFI_DII_Execution_Packet_Ext_CHERI : bits(496) = {
   rvfi_cs2_addr  : 495 .. 488,
 }
 
+bitfield RVFI_DII_Execution_Packet_Ext_CHERI_SCR : bits(344) = {
+  magic : 63 .. 0, // must be "cheriscr"
+  /// rvfi_scr_rdata is the value of the special capability register addressed
+  /// by scr before the execution of this instruction.
+  /// There is NO requirement for this output to be zero when cd is c0.
+  rvfi_scr_rdata : 191 .. 64,
+  /// rvfi_scr_wdata is the value of the special capability register addressed
+  /// by scr after the execution of this instruction.
+  /// This output must be zero when cs1 is c0.
+  rvfi_scr_wdata : 319 .. 192,
+  /// rvfi_scr_rtag is the value of the tag bit addressed
+  /// by scr before the execution of this instruction.
+  /// There is NO requirement for this output to be zero when cd is c0.
+  rvfi_scr_rtag : 327 .. 320,
+  /// rvfi_scr_wtag is the value of the tag bit addressed
+  /// by scr after the execution of this instruction.
+  /// This output must be zero when cs1 is c0.
+  rvfi_scr_wtag : 335 .. 328,
+  /// rvfi_scr_addr is the decoded special capability register address
+  /// for the retired instruction, zero-extended to 16-bits.
+  /// See scr_name_map or the spec for a list of valid addresses.
+  rvfi_scr_addr : 343 .. 336,
+}
+
 bitfield RVFI_DII_Execution_PacketV2 : bits(512) = {
   magic : 63 .. 0,         // must be set to 'trace-v2'
   trace_size : 127 .. 64,  // total size of the trace packet + extensions
@@ -233,7 +257,7 @@ bitfield RVFI_DII_Execution_PacketV2 : bits(512) = {
   floating_point_data_available: 450, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_FP if set
   csr_read_write_data_available: 451, // Followed by RVFI_DII_Execution_Packet_Ext_CSR if set
   cheri_data_available: 452, // Followed by RVFI_DII_Execution_Packet_Ext_CHERI if set
-  cheri_scr_read_write_data_available: 453, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_CHERI_SCR if set
+  cheri_scr_read_write_data_available: 453, // Followed by RVFI_DII_Execution_Packet_Ext_CHERI_SCR if set
   trap_data_available: 454, // TODO: Followed by RVFI_DII_Execution_Packet_Ext_Trap if set
   unused_data_available_fields : 511 .. 455, // To be used for additional RVFI_DII_Execution_Packet_Ext_* structs
 }
@@ -248,6 +272,8 @@ register rvfi_csr_data : RVFI_DII_Execution_Packet_Ext_CSR
 register rvfi_csr_data_present : bool
 register rvfi_cheri_data : RVFI_DII_Execution_Packet_Ext_CHERI
 register rvfi_cheri_data_present : bool
+register rvfi_cheri_scr_data : RVFI_DII_Execution_Packet_Ext_CHERI_SCR
+register rvfi_cheri_scr_data_present : bool
 
 // Reset the trace
 val rvfi_zero_exec_packet : unit -> unit
@@ -276,6 +302,11 @@ function rvfi_zero_exec_packet () = {
   // magic = "chericap" -> 0x7061636972656863 (big-endian)
   rvfi_cheri_data = update_magic(rvfi_cheri_data, 0x7061636972656863);
   rvfi_cheri_data_present = false;
+
+  rvfi_cheri_scr_data = Mk_RVFI_DII_Execution_Packet_Ext_CHERI_SCR(zero_extend(0x0));
+  // magic = "cheriscr" -> 0x7263736972656863 (big-endian)
+  rvfi_cheri_scr_data = update_magic(rvfi_cheri_scr_data, 0x7263736972656863);
+  rvfi_cheri_scr_data_present = false;
 }
 
 // FIXME: most of these will no longer be necessary once we use the c2 sail backend.
@@ -341,6 +372,7 @@ function rvfi_get_v2_trace_size () = {
   let trace_size = if (rvfi_mem_data_present) then trace_size + 704 else trace_size;
   let trace_size = if (rvfi_csr_data_present) then trace_size + 208 else trace_size;
   let trace_size = if (rvfi_cheri_data_present) then trace_size + 496 else trace_size;
+  let trace_size = if (rvfi_cheri_scr_data_present) then trace_size + 344 else trace_size;
   return trace_size >> 3; // we have to return bytes not bits
 }
 
@@ -356,6 +388,7 @@ function rvfi_get_exec_packet_v2 () = {
   let packet = update_memory_access_data_available(packet, bool_to_bits(rvfi_mem_data_present));
   let packet = update_csr_read_write_data_available(packet, bool_to_bits(rvfi_csr_data_present));
   let packet = update_cheri_data_available(packet, bool_to_bits(rvfi_cheri_data_present));
+  let packet = update_cheri_scr_read_write_data_available(packet, bool_to_bits(rvfi_cheri_scr_data_present));
   // To simplify the implementation (so that we can return a fixed-size vector)
   // we always return a max-size packet from this function, and the C emulator
   // ensures that only trace_size bits are sent over the socket.
@@ -387,6 +420,12 @@ function rvfi_get_cheri_data () = {
   return rvfi_cheri_data.bits;
 }
 
+val rvfi_get_cheri_scr_data : unit -> bits(344)
+function rvfi_get_cheri_scr_data () = {
+  assert(rvfi_cheri_scr_data_present, "reading uninitialized data");
+  return rvfi_cheri_scr_data.bits;
+}
+
 val rvfi_encode_width_mask : forall 'n, 0 < 'n <= 32. atom('n) -> bits(32)
 
 function rvfi_encode_width_mask(width) =
@@ -401,6 +440,9 @@ function print_rvfi_exec () = {
   print_bits("rvfi_csr_addr : ", rvfi_csr_data[rvfi_csr_addr]);
   print_bits("rvfi_csr_wdata: ", rvfi_csr_data[rvfi_csr_wdata]);
   print_bits("rvfi_csr_rdata: ", rvfi_csr_data[rvfi_csr_rdata]);
+  print_bits("rvfi_scr_addr : ", rvfi_cheri_scr_data[rvfi_scr_addr]);
+  print_bits("rvfi_scr_wdata: ", rvfi_cheri_scr_data[rvfi_scr_wdata]);
+  print_bits("rvfi_scr_rdata: ", rvfi_cheri_scr_data[rvfi_scr_rdata]);
   print_bits("rvfi_rd_addr  : ", rvfi_int_data[rvfi_rd_addr]);
   print_bits("rvfi_rs2_addr : ", rvfi_int_data.rvfi_rs2_addr());
   print_bits("rvfi_rs1_addr : ", rvfi_int_data.rvfi_rs1_addr());

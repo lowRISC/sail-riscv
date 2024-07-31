@@ -857,6 +857,8 @@ void rvfi_send_trace(unsigned version)
       get_and_send_rvfi_packet(zrvfi_get_csr_data);
     if (zrvfi_cheri_data_present)
       get_and_send_rvfi_packet(zrvfi_get_cheri_data);
+    if (zrvfi_cheri_scr_data_present)
+      get_and_send_rvfi_packet(zrvfi_get_cheri_scr_data);
   } else {
     fprintf(stderr, "Sending v%d packets not implemented yet!\n", version);
     abort();
