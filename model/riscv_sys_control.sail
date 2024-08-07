@@ -50,8 +50,8 @@ function is_CSR_defined (csr : csreg, p : Privilege) -> bool =
     0x3D @ idx : bits(4) => p == Machine & sys_pmp_max_count() > unsigned(0b10 @ idx),
     0x3E @ idx : bits(4) => p == Machine & sys_pmp_max_count() > unsigned(0b11 @ idx),
 
-    0x747 => p == Machine, // mseccfg
-    0x757 => p == Machine & (sizeof(xlen) == 32), // mseccfgh
+    0x747 => p == Machine & sys_pmp_count() > 0, // mseccfg
+    0x757 => p == Machine & (sizeof(xlen) == 32) & sys_pmp_count() > 0, // mseccfgh
 
     0xB00 => p == Machine, // mcycle
     0xB02 => p == Machine, // minstret
