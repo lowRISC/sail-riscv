@@ -139,6 +139,8 @@ function accessToFault(acc : AccessType(ext_access_type)) -> ExceptionType =
 
 function pmpCheck forall 'n, 'n > 0. (addr: int, width: int('n), acc: AccessType(ext_access_type), priv: Privilege)
                   -> option(ExceptionType) = {
+  if sys_pmp_count() == 0 then return None();
+
   foreach (i from 0 to 3) {
     let prev_pmpaddr = (if i > 0 then pmpReadAddrReg(i - 1) else zeros());
     match pmpMatchEntry(addr, width, acc, priv, pmpcfg_n[i], pmpReadAddrReg(i), prev_pmpaddr) {
