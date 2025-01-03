@@ -210,10 +210,15 @@ function dispatchInterrupt(priv : Privilege) -> option((InterruptType, Privilege
    * Absence of U-mode implies absence of S-mode.
    */
   assert(priv == Machine, "invalid current privilege");
-  let enabled_pending = mip.bits & mie.bits;
-  match findPendingInterrupt(enabled_pending) {
-    Some(i) => let r = (i, Machine) in Some(r),
-    None()  => None()
+
+  if nmi_mode then None()
+  else if nmi then Some(I_NM, Machine)
+  else {
+    let enabled_pending = mip.bits & mie.bits;
+    match findPendingInterrupt(enabled_pending) {
+      Some(i) => let r = (i, Machine) in Some(r),
+      None()  => None()
+    }
   }
 }
 
@@ -257,6 +262,11 @@ function trap_handler(del_priv : Privilege, intr : bool, c : exc_code, pc : xlen
 
   match (del_priv) {
     Machine => {
+       mstack[MPIE] = mstatus[MPIE];
+       mstack[MPP] = mstatus[MPP];
+       mstack_epc = MEPCC.address;
+       mstack_cause = mcause;
+
        mcause[IsInterrupt] = bool_to_bits(intr);
        mcause[Cause]       = zero_extend(c);
 
@@ -305,7 +315,17 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result,
       then print_platform("ret-ing from " ^ to_str(prev_priv) ^ " to " ^ to_str(cur_privilege));
 
       cancel_reservation();
-      prepare_xret_target(Machine) & pc_alignment_mask()
+      let dst = prepare_xret_target(Machine) & pc_alignment_mask();
+
+      if nmi_mode then {
+        nmi_mode = false;
+        mstatus[MPIE] = mstack[MPIE];
+        mstatus[MPP] = mstack[MPP];
+        MEPCC = {null_cap with address = mstack_epc};
+        mcause = mstack_cause;
+      };
+
+      dst
     }
   }
 }
@@ -324,8 +344,12 @@ function handle_exception(e: ExceptionType) -> unit = {
   set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
 }
 
-function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit =
+function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit = {
+  if i == I_NM then {
+    nmi_mode = true;
+  };
   set_next_pc(trap_handler(del_priv, true, interruptType_to_bits(i), PC, None(), None()))
+}
 
 /* state state initialization */
 

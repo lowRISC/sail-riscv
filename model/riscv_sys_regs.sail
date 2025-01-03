@@ -475,6 +475,15 @@ function tvec_addr(m : Mtvec, c : Mcause) -> option(xlenbits) = {
   }
 }
 
+/* NMI */
+
+register nmi : bool /* Pending NMI */
+register nmi_mode : bool /* We are already handling an NMI */
+
+register mstack : Mstatus
+register mstack_epc : xlenbits
+register mstack_cause : Mcause
+
 /* Exception PC */
 
 register mepc : xlenbits
