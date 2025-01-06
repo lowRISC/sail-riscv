@@ -124,17 +124,19 @@ function exception_delegatee(e : ExceptionType, p : Privilege) -> Privilege = {
 /* Interrupts are prioritized in privilege order, and for each
  * privilege, in the order: external, software, timers.
  */
-function findPendingInterrupt(ip : xlenbits) -> option(InterruptType) = {
+function findPendingInterrupt(ip : xlenbits) -> option((InterruptType, FastInterruptId)) = {
   let ip = Mk_Minterrupts(ip);
-  if      ip[MEI] == 0b1 then Some(I_M_External)
-  else if ip[MSI] == 0b1 then Some(I_M_Software)
-  else if ip[MTI] == 0b1 then Some(I_M_Timer)
-  else if ip[SEI] == 0b1 then Some(I_S_External)
-  else if ip[SSI] == 0b1 then Some(I_S_Software)
-  else if ip[STI] == 0b1 then Some(I_S_Timer)
-  else if ip[UEI] == 0b1 then Some(I_U_External)
-  else if ip[USI] == 0b1 then Some(I_U_Software)
-  else if ip[UTI] == 0b1 then Some(I_U_Timer)
+  let fast = count_trailing_zeros(ip[fastI]);
+  if fast < 15 then Some((I_Fast, fast))
+  else if ip[MEI] == 0b1 then Some((I_M_External, 0))
+  else if ip[MSI] == 0b1 then Some((I_M_Software, 0))
+  else if ip[MTI] == 0b1 then Some((I_M_Timer, 0))
+  else if ip[SEI] == 0b1 then Some((I_S_External, 0))
+  else if ip[SSI] == 0b1 then Some((I_S_Software, 0))
+  else if ip[STI] == 0b1 then Some((I_S_Timer, 0))
+  else if ip[UEI] == 0b1 then Some((I_U_External, 0))
+  else if ip[USI] == 0b1 then Some((I_U_Software, 0))
+  else if ip[UTI] == 0b1 then Some((I_U_Timer, 0))
   else                         None()
 }
 
@@ -205,18 +207,18 @@ function getPendingSet(priv : Privilege) -> option((xlenbits, Privilege)) = {
 /* Examine the current interrupt state and return an interrupt to be *
  * handled (if any), and the privilege it should be handled at.
  */
-function dispatchInterrupt(priv : Privilege) -> option((InterruptType, Privilege)) = {
+function dispatchInterrupt(priv : Privilege) -> option((InterruptType, FastInterruptId, Privilege)) = {
   /* If we don't have different privilege levels, we don't need to check delegation.
    * Absence of U-mode implies absence of S-mode.
    */
   assert(priv == Machine, "invalid current privilege");
 
   if nmi_mode then None()
-  else if nmi then Some(I_NM, Machine)
+  else if nmi then Some(I_NM, 0, Machine)
   else {
     let enabled_pending = mip.bits & mie.bits;
     match findPendingInterrupt(enabled_pending) {
-      Some(i) => let r = (i, Machine) in Some(r),
+      Some((i, n)) => let r = (i, n, Machine) in Some(r),
       None()  => None()
     }
   }
@@ -344,11 +346,11 @@ function handle_exception(e: ExceptionType) -> unit = {
   set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
 }
 
-function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit = {
+function handle_interrupt(i : InterruptType, fast : FastInterruptId, del_priv : Privilege) -> unit = {
   if i == I_NM then {
     nmi_mode = true;
   };
-  set_next_pc(trap_handler(del_priv, true, interruptType_to_bits(i), PC, None(), None()))
+  set_next_pc(trap_handler(del_priv, true, interruptType_to_bits(i, fast), PC, None(), None()))
 }
 
 /* state state initialization */

@@ -361,6 +361,8 @@ function haveZdinx()   -> bool = sys_enable_zfinx()
 /* interrupt processing state */
 
 bitfield Minterrupts : xlenbits = {
+  fastI : 30 .. 16, /* fast interrupts */
+
   MEI : 11, /* external interrupts */
   SEI : 9,
   UEI : 8,
