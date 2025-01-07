@@ -392,6 +392,7 @@ function legalize_mip(o : Minterrupts, v : xlenbits) -> Minterrupts = {
 function legalize_mie(o : Minterrupts, v : xlenbits) -> Minterrupts = {
   let v = Mk_Minterrupts(v);
   let m = [o with
+    fastI = v[fastI],
     MEI = v[MEI],
     MTI = v[MTI],
     MSI = v[MSI]
