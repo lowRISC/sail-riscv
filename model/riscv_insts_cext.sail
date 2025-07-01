@@ -87,7 +87,8 @@ mapping clause encdec_compressed = C_ADDI(nzi5 @ nzi40, rsd)
 
 function clause decompress C_ADDI(nzi, rsd) = {
   let imm : bits(12) = sign_extend(nzi);
-  Some(ITYPE(imm, rsd, rsd, RISCV_ADDI))
+  let dst : regidx = if nzi == 0b000000 then zreg else rsd;
+  Some(ITYPE(imm, rsd, dst, RISCV_ADDI))
 }
 
 mapping clause assembly = C_ADDI(nzi, rsd)
