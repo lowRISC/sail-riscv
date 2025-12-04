@@ -405,8 +405,8 @@ function reset_sys() -> unit = {
   /* initialize vector csrs */
   vstart             = zeros();
   vl                 = zeros();
-  vcsr[vxrm]       = 0b00;
-  vcsr[vxsat]      = 0b0;
+  // vcsr[vxrm]       = 0b00;
+  // vcsr[vxsat]      = 0b0;
   vtype[vill]      = 0b1;
   vtype[reserved]  = zeros();
   vtype[vma]       = 0b0;

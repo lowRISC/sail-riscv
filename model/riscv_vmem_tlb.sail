@@ -164,10 +164,11 @@ function add_to_TLB forall 'v, is_sv_mode('v) . (
 // PUBLIC: invoked from exec SFENCE_VMA
 function flush_TLB(asid : option(asidbits),
                    addr : option(xlenbits)) -> unit = {
-  foreach (i from 0 to (length(tlb) - 1)) {
-    match tlb[i] {
-      None()  => (),
-      Some(entry) => if flush_TLB_Entry(entry, asid, addr) then { tlb[i] = None(); },
-    }
-  }
+  ()
+  // foreach (i from 0 to (length(tlb) - 1)) {
+  //   match tlb[i] {
+  //     None()  => (),
+  //     Some(entry) => if flush_TLB_Entry(entry, asid, addr) then { tlb[i] = None(); },
+  //   }
+  // }
 }
