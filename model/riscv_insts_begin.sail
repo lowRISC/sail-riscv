@@ -17,6 +17,10 @@ scattered union ast
 val execute : ast -> Retired
 scattered function execute
 
+/* decompresses a compressed instruction to its uncompressed equivalent */
+val decompress : ast -> option(ast)
+scattered function decompress
+
 val assembly : ast <-> string
 scattered mapping assembly
 
