@@ -120,7 +120,7 @@ function pmaCheck forall 'n, 0 < 'n <= max_mem_access .
   accTy      : AccessType(ext_access_type),
   res_or_con : bool,
 )  -> option(ExceptionType) = {
-  match matching_pma(pma_regions, paddr, width) {
+  match matching_pma(pma_regions, num_pma_regions, paddr, width) {
     None() => {
       Some(accessFaultFromAccessType(accTy))
     },

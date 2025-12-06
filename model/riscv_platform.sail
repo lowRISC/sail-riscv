@@ -75,12 +75,12 @@ function plat_pma_reservability(i) = reservability_int(plat_pma_reservability_in
 
 val init_pma_regions : unit -> unit
 function init_pma_regions() = {
-  // Clear regions so this is idempotent.
-  pma_regions = [||];
+  // Clear regions count
+  num_pma_regions = 0;
 
-  // Iterate backwards because pma_regions is a singly linked list that we
-  // prepend to.
-  foreach (i from (plat_pma_count() - 1) downto 0) {
+  // Populate the vector with regions from platform configuration
+  foreach (i from 0 to (plat_pma_count() - 1)) {
+    assert(i < max_pma_regions_val, "PMA region index out of bounds");
     let attr : PMA = struct {
       cacheable                        = plat_pma_cacheable(i),
       coherent                         = plat_pma_coherent(i),
@@ -106,8 +106,11 @@ function init_pma_regions() = {
       size       = plat_pma_size(i),
       attributes = attr,
     };
-    pma_regions = region :: pma_regions;
+    pma_regions[i] = region;
   };
+  let count = plat_pma_count();
+  assert(count <= max_pma_regions_val, "Too many PMA regions for configured max");
+  num_pma_regions = count;
 }
 
 /* whether the MMU should update dirty bits in PTEs */

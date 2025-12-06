@@ -2,6 +2,10 @@
 // reserved load and store. This assumes PMAs never change during
 // execution, but this might not hold for hot pluggable devices.
 
+// Configurable maximum number of PMA regions (must match hardware)
+type max_pma_regions : Int = 2
+let  max_pma_regions_val = 2
+
 enum AtomicSupport = { AMONone, AMOSwap, AMOLogical, AMOArithmetic }
 enum Reservability = { RsrvNone, RsrvNonEventual, RsrvEventual }
 
@@ -59,15 +63,15 @@ struct PMA_Region = {
 }
 
 // Get the first PMA that matches a given address range.
-function matching_pma(pmas : list(PMA_Region), physaddr(addr) : physaddr, width : mem_access_width) -> option(PMA_Region) = {
-  match pmas {
-    [||] => None(),
-    pma :: rest => {
-      if range_subset(addr, addr + width, physaddr_bits(pma.base), physaddr_bits(pma.base) + pma.size)
-      then Some(pma)
-      else matching_pma(rest, physaddr(addr), width)
-    },
-  }
+// Now uses a fixed-size vector and iterative search instead of recursive list traversal.
+function matching_pma(pmas : vector(max_pma_regions, PMA_Region), num_regions : range(0, 1024), physaddr(addr) : physaddr, width : mem_access_width) -> option(PMA_Region) = {
+  foreach (i from 0 to (num_regions - 1)) {
+    assert(i < max_pma_regions_val, "PMA region index out of bounds in matching_pma");
+    let pma = pmas[i];
+    if range_subset(addr, addr + width, physaddr_bits(pma.base), physaddr_bits(pma.base) + pma.size)
+    then return Some(pma)
+  };
+  None()
 }
 
 // Printing to a string.
@@ -94,8 +98,30 @@ function pma_region_to_str(region : PMA_Region) -> string =
 
 overload to_str = {pma_attributes_to_str, pma_region_to_str, atomic_support_name, reservability_name}
 
-// The list of PMAs. The behaviour is undefined if these overlap.
-register pma_regions : list(PMA_Region) = [||]
+// The vector of PMAs. The behaviour is undefined if these overlap.
+// num_pma_regions tracks how many regions are actually in use.
+register num_pma_regions : range(0, 1024) = 0
+register pma_regions : vector(max_pma_regions, PMA_Region) = vector_init(max_pma_regions_val, struct {
+  base       = physaddr(0x0000000000000000),
+  size       = 0x0000000000000000,
+  attributes = struct {
+    cacheable                        = false,
+    coherent                         = false,
+    executable                       = false,
+    readable                         = false,
+    writable                         = false,
+    readIdempotent                   = false,
+    writeIdempotent                  = false,
+    relaxed                          = false,
+    misalignmentCausesAccessFault    = false,
+    misalignmentCausesAlignmentFault = false,
+    atomicSupport                    = AMONone,
+    reservability                    = RsrvNone,
+    taggable                         = false,
+    taggableAccessFaults             = false,
+    supportsCboZero                  = false,
+  }
+})
 
 
 function accessFaultFromAccessType (accTy : AccessType(ext_access_type)) -> ExceptionType =
@@ -115,7 +141,7 @@ function alignmentFaultFromAccessType(accTy : AccessType(ext_access_type)) -> Ex
 // Return true if the memory is taggable. We don't need to worry about checking
 // the whole range since unaligned tagged reads/writes never happen.
 function is_taggable(paddr : physaddr, width : mem_access_width) -> bool =
-  match matching_pma(pma_regions, paddr, width) {
+  match matching_pma(pma_regions, num_pma_regions, paddr, width) {
     None() => internal_error(__FILE__, __LINE__, "memory read/write in memory without PMAs; this should be impossible"),
     Some(struct { attributes, _ }) => attributes.taggable,
   }
