@@ -498,6 +498,14 @@ bitfield Counteren : bits(32) = {
 register mcounteren : Counteren
 register scounteren : Counteren
 
+function legalize_mcounteren(c : Counteren, v : xlenbits) -> Counteren = {
+  /* CY (mcycle, bit 0) and IR (minstret, bit 2) are writable. */
+  /* TM (mtime, bit 1) is not implemented (hardwired to 0). */
+  /* 10 HPM counters (HPM3-HPM12, meaning bits 12..3) are writable. */
+  /* The remaining 19 HPM bits (31..13) are hardwired to 0. */
+  [c with IR = [v[2]], TM = 0b0, CY = [v[0]], HPM = sail_zeros(19) @ v[12..3]]
+}
+
 bitfield Counterin : bits(32) = {
   /* no HPM counters yet */
   IR : 2,

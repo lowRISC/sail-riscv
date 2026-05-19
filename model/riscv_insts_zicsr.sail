@@ -87,7 +87,7 @@ function writeCSR (csr : csreg, value : xlenbits) -> unit = {
     (0x303,  _) => { mideleg = legalize_mideleg(mideleg, value); Some(mideleg.bits) },
     (0x304,  _) => { mie = legalize_mie(mie, value); Some(mie.bits) },
     (0x305,  _) => { Some(set_mtvec(value)) },
-    (0x306,  _) => { Some(zero_extend(mcounteren.bits)) },
+    (0x306,  _) => { mcounteren = legalize_mcounteren(mcounteren, value); Some(zero_extend(mcounteren.bits)) },
     (0x30A, 32) => { menvcfg = legalize_menvcfg(menvcfg, menvcfg.bits[63 .. 32] @ value); Some(menvcfg.bits[31 .. 0]) },
     (0x30A, 64) => { menvcfg = legalize_menvcfg(menvcfg, value); Some(menvcfg.bits) },
     (0x310, 32) => { Some(mstatush.bits) }, // ignore writes for now
