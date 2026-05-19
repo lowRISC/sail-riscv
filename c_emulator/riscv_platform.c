@@ -57,6 +57,11 @@ bool sys_enable_vext(unit u)
   return rv_enable_vext;
 }
 
+uint64_t sys_hpm_count(unit u)
+{
+  return 10;
+}
+
 uint64_t sys_pmp_count(unit u)
 {
   return rv_pmp_count;

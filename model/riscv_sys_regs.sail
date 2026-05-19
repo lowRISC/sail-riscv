@@ -104,6 +104,9 @@ val sys_pmp_grain = {c: "sys_pmp_grain", ocaml: "Platform.pmp_grain", _: "sys_pm
 /* Max PMP count, is the number of hardwired to zero PMP registers + the number of real sys_pmp_count() */
 val sys_pmp_max_count = {c: "sys_pmp_max_count", ocaml: "Platform.pmp_max_count", _: "sys_pmp_max_count"} : unit -> range(0, 64)
 
+/* How many HPM performance counters are implemented (0 to 29) */
+val sys_hpm_count = {c: "sys_hpm_count", sv: "sys_hpm_count", ocaml: "Platform.hpm_count", _: "sys_hpm_count"} : unit -> range(0, 29)
+
 /* whether misa.v was enabled at boot */
 val sys_enable_vext = {c: "sys_enable_vext", ocaml: "Platform.enable_vext", _: "sys_enable_vext"} : unit -> bool
 
@@ -499,11 +502,15 @@ register mcounteren : Counteren
 register scounteren : Counteren
 
 function legalize_mcounteren(c : Counteren, v : xlenbits) -> Counteren = {
-  /* CY (mcycle, bit 0) and IR (minstret, bit 2) are writable. */
-  /* TM (mtime, bit 1) is not implemented (hardwired to 0). */
-  /* 10 HPM counters (HPM3-HPM12, meaning bits 12..3) are writable. */
-  /* The remaining 19 HPM bits (31..13) are hardwired to 0. */
-  [c with IR = [v[2]], TM = 0b0, CY = [v[0]], HPM = sail_zeros(19) @ v[12..3]]
+  let hpm_count : range(0, 29) = sys_hpm_count();
+  let shift_amt : range(0, 29) = 29 - hpm_count;
+
+  /* The HPM field is 29 bits long (bits 31..3 of mcounteren).
+   * By shifting left by (29 - hpm_count) and then right by the same amount,
+   * we effectively zero out all bits above the number of implemented counters. */
+  let masked_hpm : bits(29) = (v[31..3] << shift_amt) >> shift_amt;
+
+  [c with IR = [v[2]], TM = 0b0, CY = [v[0]], HPM = masked_hpm]
 }
 
 bitfield Counterin : bits(32) = {
