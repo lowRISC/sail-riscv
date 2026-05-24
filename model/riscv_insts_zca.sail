@@ -28,9 +28,9 @@ mapping clause assembly = C_NOP() <-> "c.nop"
 union clause ast = C_ADDI4SPN : (cregidx, bits(8))
 
 mapping clause encdec_compressed = C_ADDI4SPN(rd, nz96 @ nz54 @ nz3 @ nz2)
-      if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
+      // if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
   <-> 0b000 @ nz54 : bits(2) @ nz96 : bits(4) @ nz2 : bits(1) @ nz3 : bits(1) @ encdec_creg(rd) @ 0b00
-      if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
+      // if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_ADDI4SPN(rdc, nzimm)) = {
   let imm : bits(12) = (0b00 @ nzimm @ 0b00);
@@ -119,9 +119,9 @@ mapping clause assembly = C_SD(uimm, rsc1, rsc2)
 union clause ast = C_ADDI : (bits(6), regidx)
 
 mapping clause encdec_compressed = C_ADDI(nzi5 @ nzi40, rsd)
-      if nzi5 @ nzi40 != 0b000000 & rsd != zreg & extensionEnabled(Ext_Zca)
+      // if nzi5 @ nzi40 != 0b000000 & rsd != zreg & extensionEnabled(Ext_Zca)
   <-> 0b000 @ nzi5 : bits(1) @ encdec_reg(rsd) @ nzi40 : bits(5) @ 0b01
-      if nzi5 @ nzi40 != 0b000000 & rsd != zreg & extensionEnabled(Ext_Zca)
+      // if nzi5 @ nzi40 != 0b000000 & rsd != zreg & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_ADDI(nzi, rsd)) = {
   let imm : bits(12) = sign_extend(nzi);
@@ -169,9 +169,9 @@ mapping clause assembly = C_ADDIW(imm, rsd)
 union clause ast = C_LI : (bits(6), regidx)
 
 mapping clause encdec_compressed = C_LI(imm5 @ imm40, rd)
-      if rd != zreg & extensionEnabled(Ext_Zca)
+      // if rd != zreg & extensionEnabled(Ext_Zca)
   <-> 0b010 @ imm5 : bits(1) @ encdec_reg(rd) @ imm40 : bits(5) @ 0b01
-      if rd != zreg & extensionEnabled(Ext_Zca)
+      // if rd != zreg & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_LI(imm, rd)) = {
   let imm : bits(12) = sign_extend(imm);
@@ -223,9 +223,9 @@ mapping clause assembly = C_LUI(imm, rd)
 union clause ast = C_SRLI : (bits(6), cregidx)
 
 mapping clause encdec_compressed = C_SRLI(nzui5 @ nzui40, rsd)
-      if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
+      // if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
   <-> 0b100 @ nzui5 : bits(1) @ 0b00 @ encdec_creg(rsd) @ nzui40 : bits(5) @ 0b01
-      if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
+      // if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_SRLI(shamt, rsd)) = {
   let rsd = creg2reg_idx(rsd);
@@ -241,9 +241,9 @@ mapping clause assembly = C_SRLI(shamt, rsd)
 union clause ast = C_SRAI : (bits(6), cregidx)
 
 mapping clause encdec_compressed = C_SRAI(nzui5 @ nzui40, rsd)
-      if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
+      // if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
   <-> 0b100 @ nzui5 : bits(1) @ 0b01 @ encdec_creg(rsd) @ nzui40 : bits(5) @ 0b01
-      if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
+      // if nzui5 @ nzui40 != 0b000000 & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_SRAI(shamt, rsd)) = {
   let rsd = creg2reg_idx(rsd);
@@ -407,9 +407,9 @@ mapping clause assembly = C_BNEZ(imm, rs)
 union clause ast = C_SLLI : (bits(6), regidx)
 
 mapping clause encdec_compressed = C_SLLI(nzui5 @ nzui40, rsd)
-      if nzui5 @ nzui40 != 0b000000 & rsd != zreg & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
+      // if nzui5 @ nzui40 != 0b000000 & rsd != zreg & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
   <-> 0b000 @ nzui5 : bits(1) @ encdec_reg(rsd) @ nzui40 : bits(5) @ 0b10
-      if nzui5 @ nzui40 != 0b000000 & rsd != zreg & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
+      // if nzui5 @ nzui40 != 0b000000 & rsd != zreg & (xlen == 64 | nzui5 == 0b0) & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_SLLI(shamt, rsd)) =
   Some(SHIFTIOP(shamt, rsd, rsd, RISCV_SLLI))

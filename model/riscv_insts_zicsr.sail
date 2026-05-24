@@ -28,7 +28,7 @@ val handle_csr_op : (
   csrop,
   bool,
   bool,
-) -> Retired
+) -> ExecutionResult
 
 function clause execute CSR(csr, rs1, rd, is_imm, op) = {
   // CSRRW[I] always writes. CSRRS[I] and CSRRC[I] write if the
@@ -39,10 +39,10 @@ function clause execute CSR(csr, rs1, rd, is_imm, op) = {
   let isRead = op != CSRRW | regidx_bits(rd) != zeros();
 
   if not(check_CSR(csr, cur_privilege(), isWrite))
-  then { handle_illegal(); RETIRE_FAIL }
+  then { illegal_instruction() }
   else {
     match ext_check_CSR(csr, cur_privilege(), isWrite, op, is_imm) {
-      Some(err) => {ext_check_CSR_fail(err); RETIRE_FAIL},
+      Some(err) => { ext_check_CSR_fail(err) },
       None() => handle_csr_op(csr, rs1, rd, is_imm, op, isWrite, isRead),
     }
   }
@@ -56,7 +56,7 @@ function default_handle_csr_op(
   op : csrop,
   isWrite : bool,
   isRead : bool,
-) -> Retired = {
+) -> ExecutionResult = {
   let is_CSRRW_write = isWrite & (op == CSRRW) & not(is_imm);
   let write_val : xlenbits = if is_imm then zero_extend(regidx_bits(rs1)) else X(rs1);
   // Reading CSRs can have side effects and is not done in certain cases.

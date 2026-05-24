@@ -117,7 +117,7 @@ overload to_str = {privLevel_to_str}
 
 /* enum denoting whether an executed instruction retires */
 
-enum Retired = {RETIRE_SUCCESS, RETIRE_FAIL}
+// enum Retired = {RETIRE_SUCCESS, RETIRE_FAIL}
 
 /* memory access types */
 enum CacheAccessType = {
@@ -413,3 +413,5 @@ struct mul_op = {
   signed_rs1 : bool,
   signed_rs2 : bool
 }
+
+enum WaitReason = {WAIT_WFI, WAIT_WRS_STO, WAIT_WRS_NTO}

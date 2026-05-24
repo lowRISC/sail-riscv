@@ -13,7 +13,7 @@ type ext_exception = unit
 /* Is XRET from given mode permitted by extension? */
 function ext_check_xret_priv (p : Privilege) : Privilege -> bool = true
 /* Called if above check fails */
-function ext_fail_xret_priv () : unit -> unit = ()
+function ext_fail_xret_priv () : unit -> ExecutionResult = RETIRE_SUCCESS
 
 function ext_ptw_exception_info(ext_ptw : ext_ptw) -> ext_exception = ()
 

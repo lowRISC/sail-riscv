@@ -17,8 +17,8 @@
 function ext_fetch_check_pc(start_pc : xlenbits, pc : xlenbits) -> Ext_FetchAddr_Check(ext_fetch_addr_error) =
   Ext_FetchAddr_OK(virtaddr(pc))
 
-function ext_handle_fetch_check_error(err : ext_fetch_addr_error) -> unit =
-  ()
+function ext_handle_fetch_check_error(err : ext_fetch_addr_error) -> ExecutionResult =
+  RETIRE_SUCCESS
 
 /* default control address checks */
 
@@ -41,8 +41,8 @@ function ext_control_check_addr(pc : xlenbits) -> Ext_ControlAddr_Check(ext_cont
 function ext_control_check_pc(pc : xlenbits) -> Ext_ControlAddr_Check(ext_control_addr_error) =
   Ext_ControlAddr_OK(virtaddr(convertInvalidAddr(pc)))
 
-function ext_handle_control_check_error(err : ext_control_addr_error) -> unit =
-  ()
+function ext_handle_control_check_error(err : ext_control_addr_error) -> ExecutionResult =
+  RETIRE_SUCCESS
 
 
 /* The default data address function does not perform any checks so
@@ -56,8 +56,8 @@ function ext_data_get_addr(base : regidx, offset : xlenbits, acc : AccessType(ex
   let addr = virtaddr(X(base) + offset) in
   Ext_DataAddr_OK(addr)
 
-function ext_handle_data_check_error(err : ext_data_addr_error) -> unit =
-  ()
+function ext_handle_data_check_error(err : ext_data_addr_error) -> ExecutionResult =
+  RETIRE_SUCCESS
 
 /* Default implementations of these hooks permit all accesses.  */
 function ext_check_phys_mem_read (access_type, paddr, size, aquire, release, reserved, read_meta) =

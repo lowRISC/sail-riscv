@@ -63,15 +63,13 @@ function clause execute (RISCV_JAL(imm, rd)) = {
   /* Extensions get the first checks on the prospective target address. */
   match ext_control_check_pc(target) {
     Ext_ControlAddr_Error(e) => {
-      ext_handle_control_check_error(e);
-      RETIRE_FAIL
+      ext_handle_control_check_error(e)
     },
     Ext_ControlAddr_OK(target) => {
       /* Perform standard alignment check */
       let target_bits = virtaddr_bits(target);
       if bit_to_bool(target_bits[1]) & not(extensionEnabled(Ext_Zca)) then {
-        handle_mem_exception(target, E_Fetch_Addr_Align());
-        RETIRE_FAIL
+        memory_exception(target, E_Fetch_Addr_Align())
       } else {
         X(rd) = get_next_pc();
         set_next_pc(target_bits);
@@ -126,14 +124,12 @@ function clause execute (BTYPE(imm, rs2, rs1, op)) = {
     /* Extensions get the first checks on the prospective target address. */
     match ext_control_check_pc(target) {
       Ext_ControlAddr_Error(e) => {
-        ext_handle_control_check_error(e);
-        RETIRE_FAIL
+        ext_handle_control_check_error(e)
       },
       Ext_ControlAddr_OK(target) => {
         let target_bits = virtaddr_bits(target);
         if bit_to_bool(target_bits[1]) & not(extensionEnabled(Ext_Zca)) then {
-          handle_mem_exception(target, E_Fetch_Addr_Align());
-          RETIRE_FAIL
+          memory_exception(target, E_Fetch_Addr_Align())
         } else {
           set_next_pc(target_bits);
           RETIRE_SUCCESS
@@ -306,13 +302,13 @@ function clause execute (LOAD(imm, rs1, rd, is_unsigned, width, aq, rl)) = {
   /* Get the address, X(rs1) + offset.
      Some extensions perform additional checks on address validity. */
   match ext_data_get_addr(rs1, offset, Read(Data), width_bytes) {
-    Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e); RETIRE_FAIL },
+    Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e) },
     Ext_DataAddr_OK(vaddr) => {
       if   check_misaligned(vaddr, width)
-      then { handle_mem_exception(vaddr, E_Load_Addr_Align()); RETIRE_FAIL }
+      then { memory_exception(vaddr, E_Load_Addr_Align()) }
       else match vmem_read(Read(Data), vaddr, width_bytes, aq, rl, false) {
         Ok(result)    => { X(rd) = extend_value(is_unsigned, result); RETIRE_SUCCESS },
-        Err(vaddr, e, _) => { handle_mem_exception(vaddr, e); RETIRE_FAIL }
+        Err(vaddr, e, _) => { memory_exception(vaddr, e) }
       }
     },
   }
@@ -357,18 +353,18 @@ function clause execute (STORE(imm, rs2, rs1, width, aq, rl)) = {
   /* Get the address, X(rs1) + offset.
      Some extensions perform additional checks on address validity. */
   match ext_data_get_addr(rs1, offset, Write(Data), width_bytes) {
-    Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e); RETIRE_FAIL },
+    Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e) },
     Ext_DataAddr_OK(vaddr) => {
       if   check_misaligned(vaddr, width)
-      then { handle_mem_exception(vaddr, E_SAMO_Addr_Align()); RETIRE_FAIL }
+      then { memory_exception(vaddr, E_SAMO_Addr_Align()) }
       else match vmem_write_translate(vaddr, width_bytes, Write(Data), aq, rl, false) {
-        Err(vaddr, e, _) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
+        Err(vaddr, e, _) => { memory_exception(vaddr, e) },
         Ok(state)     => {
           let rs2_val = X(rs2);
           match vmem_write_value(state, rs2_val[width_bytes * 8 - 1 .. 0]) {
             Ok(true)  => RETIRE_SUCCESS,
             Ok(false) => internal_error(__FILE__, __LINE__, "store got false from mem_write_value"),
-            Err(vaddr, e, _) => { handle_mem_exception(vaddr, e); RETIRE_FAIL }
+            Err(vaddr, e, _) => { memory_exception(vaddr, e) }
           }
         }
       }
@@ -588,8 +584,7 @@ function clause execute ECALL() = {
                     },
              excinfo = (None() : option(xlenbits)),
              ext     = None() };
-  set_next_pc(exception_handler(cur_privilege(), CTL_TRAP(t), PC));
-  RETIRE_FAIL
+    trap(t)
 }
 
 mapping clause assembly = ECALL() <-> "ecall"
@@ -602,12 +597,11 @@ mapping clause encdec = MRET()
 
 function clause execute MRET() = {
   if   cur_privilege() != Machine
-  then { handle_illegal(); RETIRE_FAIL }
+  then { illegal_instruction() }
   else if not(ext_check_xret_priv (Machine))
-  then { ext_fail_xret_priv(); RETIRE_FAIL }
+  then { ext_fail_xret_priv() }
   else {
-    set_next_pc(exception_handler(cur_privilege(), CTL_MRET(), PC));
-    RETIRE_SUCCESS
+    Exception(cur_privilege(), CTL_MRET(), PC)
   }
 }
 
@@ -626,12 +620,11 @@ function clause execute SRET() = {
     Machine    => not(extensionEnabled(Ext_S))
   };
   if   sret_illegal
-  then { handle_illegal(); RETIRE_FAIL }
+  then { illegal_instruction() }
   else if not(ext_check_xret_priv (Supervisor))
-  then { ext_fail_xret_priv(); RETIRE_FAIL }
+  then { ext_fail_xret_priv() }
   else {
-    set_next_pc(exception_handler(cur_privilege(), CTL_SRET(), PC));
-    RETIRE_SUCCESS
+    Exception(cur_privilege(), CTL_SRET(), PC)
   }
 }
 
@@ -644,8 +637,7 @@ mapping clause encdec = EBREAK()
   <-> 0b000000000001 @ 0b00000 @ 0b000 @ 0b00000 @ 0b1110011
 
 function clause execute EBREAK() = {
-  handle_mem_exception(virtaddr(PC), E_Breakpoint());
-  RETIRE_FAIL
+  memory_exception(virtaddr(PC), E_Breakpoint())
 }
 
 mapping clause assembly = EBREAK() <-> "ebreak"
@@ -660,9 +652,9 @@ function clause execute WFI() =
   match cur_privilege() {
     Machine    => { platform_wfi(); RETIRE_SUCCESS },
     Supervisor => if   mstatus[TW] == 0b1
-                  then { handle_illegal(); RETIRE_FAIL }
+                  then { illegal_instruction() }
                   else { platform_wfi(); RETIRE_SUCCESS },
-    User       => { handle_illegal(); RETIRE_FAIL }
+    User       => { illegal_instruction() }
   }
 
 mapping clause assembly = WFI() <-> "wfi"
@@ -680,9 +672,9 @@ function clause execute SFENCE_VMA(rs1, rs2) = {
   // is 9 but we always set it to 16 for RV64.
   let asid = if rs2 != zreg then Some((X(rs2) & zero_extend(ones(sys_asid_bits())))[asidlen - 1 .. 0]) else None();
   match cur_privilege() {
-    User       => { handle_illegal(); RETIRE_FAIL },
+    User       => { illegal_instruction() },
     Supervisor => match mstatus[TVM] {
-                    0b1 => { handle_illegal(); RETIRE_FAIL },
+                    0b1 => { illegal_instruction() },
                     0b0 => { flush_TLB(asid, addr); RETIRE_SUCCESS },
                   },
     Machine    => { flush_TLB(asid, addr); RETIRE_SUCCESS }

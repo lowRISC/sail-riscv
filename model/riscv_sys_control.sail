@@ -434,3 +434,48 @@ function MemoryOpResult_drop_meta(r) = match r {
   Ok(v, m)  => Ok(v),
   Err(e) => Err(e)
 }
+
+union ExecutionResult = {
+  // Successfully retired.
+  Retire_Success                 : unit,
+  Exception                           : (Privilege, ctl_result, xlenbits),
+}
+
+// To ease the introduction of `ExecutionResult`, this global
+// definition is temporarily used instead of the previous
+// RETIRE_SUCCESS enum value so that we don't have to immediately
+// update all the places RETIRE_SUCCESS was used.
+
+let RETIRE_SUCCESS : ExecutionResult = Retire_Success()
+
+// Trap helpers
+
+function trap(e : sync_exception) -> ExecutionResult =
+  Exception(cur_privilege(), CTL_TRAP(e), PC)
+
+function make_sync_exception(e : ExceptionType, xtval : option(xlenbits)) -> sync_exception =
+  struct { trap    = e,
+           excinfo = xtval,
+           ext     = None() }
+
+function memory_exception(vaddr : virtaddr, exc : ExceptionType) -> ExecutionResult =
+  trap(make_sync_exception(exc, Some(virtaddr_bits(vaddr))))
+
+function translate_exception(virtaddr(addr) : virtaddr, e : ExceptionType, ext_ptw : ext_ptw) -> ExecutionResult = {
+  let addr = convertInvalidAddr(addr);
+  let t : sync_exception = struct { trap    = e,
+                                    excinfo = Some(addr),
+                                    ext     = Some(ext_ptw_exception_info(ext_ptw)) } in
+  trap(t)
+}
+
+function illegal_instruction() -> ExecutionResult = {
+    // let info = if plat_mtval_has_illegal_inst_bits ()
+    //          then Some(instbits)
+    //          else None();
+    let info = Some(instbits);
+    let t : sync_exception = struct { trap    = E_Illegal_Instr(),
+                                    excinfo = info,
+                                    ext     = None() };
+    trap(t)
+}

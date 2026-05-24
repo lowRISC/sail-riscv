@@ -14,7 +14,7 @@ function clause extensionEnabled(_) = false
 
 mapping clause encdec = ILLEGAL(s) <-> s
 
-function clause execute (ILLEGAL(s)) = { handle_illegal(); RETIRE_FAIL }
+function clause execute (ILLEGAL(s)) = { illegal_instruction() }
 
 mapping clause assembly = ILLEGAL(s) <-> "illegal" ^ spc() ^ hex_bits_32(s)
 
