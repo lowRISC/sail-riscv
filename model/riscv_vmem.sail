@@ -333,7 +333,8 @@ function translateAddr(
   // See riscv_sys_regs.sail for effectivePrivilege() and cur_privilege
   let effPriv = effectivePrivilege(ac, mstatus, cur_privilege());
 
-  let mode = translationMode(effPriv);
+  // let mode = translationMode(effPriv);
+  let mode = Bare;
 
   if mode == Bare then return TR_Address(physaddr(zero_extend(virtaddr_bits(vAddr))), PMA, init_ext_ptw);
 
