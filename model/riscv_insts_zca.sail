@@ -28,9 +28,9 @@ mapping clause assembly = C_NOP() <-> "c.nop"
 union clause ast = C_ADDI4SPN : (cregidx, bits(8))
 
 mapping clause encdec_compressed = C_ADDI4SPN(rd, nz96 @ nz54 @ nz3 @ nz2)
-      // if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
+      if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
   <-> 0b000 @ nz54 : bits(2) @ nz96 : bits(4) @ nz2 : bits(1) @ nz3 : bits(1) @ encdec_creg(rd) @ 0b00
-      // if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
+      if nz96 @ nz54 @ nz3 @ nz2 != 0b00000000 & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_ADDI4SPN(rdc, nzimm)) = {
   let imm : bits(12) = (0b00 @ nzimm @ 0b00);
