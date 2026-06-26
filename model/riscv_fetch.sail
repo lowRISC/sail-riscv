@@ -10,6 +10,8 @@
  * to check PC validity *before* standard fetch processing checks.
  */
 
+function ext_fetch_mem_read_hi(paddr : physaddr, pbmt : PBMT) -> MemoryOpResult(half) = Ok(instbits[31..16])
+function ext_fetch_mem_read_lo(paddr : physaddr, pbmt : PBMT) -> MemoryOpResult(half) = Ok(instbits[15..0])
 
 function fetch() -> FetchResult =
   /* fetch PC check for extensions: extensions return a transformed PC to fetch,
