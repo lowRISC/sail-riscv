@@ -171,14 +171,6 @@ function shift_bits_right_arith(value, shift) =
 infix 7 >>>
 infix 7 <<<
 
-val rotate_bits_right : forall 'n 'm, 'm >= 0. (bits('n), bits('m)) -> bits('n)
-function rotate_bits_right (v, n) =
-    (v >> n) | (v << (to_bits(length(n), length(v)) - n))
-
-val rotate_bits_left : forall 'n 'm, 'm >= 0. (bits('n), bits('m)) -> bits('n)
-function rotate_bits_left (v, n) =
-    (v << n) | (v >> (to_bits(length(n), length(v)) - n))
-
 val rotater : forall 'm 'n, 'm >= 'n >= 0. (bits('m), int('n)) -> bits('m)
 function rotater (v, n) =
     (v >> n) | (v << (length(v) - n))
@@ -186,6 +178,12 @@ function rotater (v, n) =
 val rotatel : forall 'm 'n, 'm >= 'n >= 0. (bits('m), int('n)) -> bits('m)
 function rotatel (v, n) =
     (v << n) | (v >> (length(v) - n))
+
+val rotate_bits_right : forall 'm 'n, 'n >= 0 & 'm >= 2 ^ 'n . (bits('m), bits('n)) -> bits('m)
+function rotate_bits_right(value, shift) = rotater(value, unsigned(shift))
+
+val rotate_bits_left : forall 'm 'n, 'n >= 0 & 'm >= 2 ^ 'n . (bits('m), bits('n)) -> bits('m)
+function rotate_bits_left (value, shift) = rotatel(value, unsigned(shift))
 
 overload operator >>> = {rotate_bits_right, rotater}
 overload operator <<< = {rotate_bits_left, rotatel}
