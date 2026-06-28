@@ -205,9 +205,11 @@ mapping clause assembly = C_ADDI16SP(imm)
 union clause ast = C_LUI : (bits(6), regidx)
 
 mapping clause encdec_compressed = C_LUI(imm17 @ imm1612, rd)
-      if rd != zreg & rd != sp & imm17 @ imm1612 != 0b000000 & extensionEnabled(Ext_Zca)
+      // if rd != zreg & rd != sp & imm17 @ imm1612 != 0b000000 & extensionEnabled(Ext_Zca)
+      if imm17 @ imm1612 != 0b000000 & extensionEnabled(Ext_Zca)
   <-> 0b011 @ imm17 : bits(1) @ encdec_reg(rd) @ imm1612 : bits(5) @ 0b01
-      if rd != zreg & rd != sp & imm17 @ imm1612 != 0b000000 & extensionEnabled(Ext_Zca)
+      // if rd != zreg & rd != sp & imm17 @ imm1612 != 0b000000 & extensionEnabled(Ext_Zca)
+      if imm17 @ imm1612 != 0b000000 & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_LUI(imm, rd)) = {
   let res : bits(20) = sign_extend(imm);
@@ -525,9 +527,11 @@ mapping clause assembly = C_JALR(rs1)
 union clause ast = C_MV : (regidx, regidx)
 
 mapping clause encdec_compressed = C_MV(rd, rs2)
-      if rd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      // if rd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      if rs2 != zreg & extensionEnabled(Ext_Zca)
   <-> 0b100 @ 0b0 @ encdec_reg(rd) @ encdec_reg(rs2) @ 0b10
-      if rd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      // if rd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      if rs2 != zreg & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_MV(rd, rs2)) =
   Some(RTYPE(rs2, zreg, rd, RISCV_ADD))
@@ -552,9 +556,11 @@ mapping clause assembly = C_EBREAK() <-> "c.ebreak"
 union clause ast = C_ADD : (regidx, regidx)
 
 mapping clause encdec_compressed = C_ADD(rsd, rs2)
-      if rsd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      // if rsd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      if rs2 != zreg & extensionEnabled(Ext_Zca)
   <-> 0b100 @ 0b1 @ encdec_reg(rsd) @ encdec_reg(rs2) @ 0b10
-      if rsd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      // if rsd != zreg & rs2 != zreg & extensionEnabled(Ext_Zca)
+      if rs2 != zreg & extensionEnabled(Ext_Zca)
 
 function clause decompress (C_ADD(rsd, rs2)) =
   Some(RTYPE(rs2, rsd, rsd, RISCV_ADD))
