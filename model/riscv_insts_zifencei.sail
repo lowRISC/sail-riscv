@@ -13,12 +13,12 @@
 
 function clause extensionEnabled(Ext_Zifencei) = true
 
-union clause ast = FENCEI : unit
+union clause ast = FENCEI : (bits(17), bits(5))
 
-mapping clause encdec = FENCEI() if extensionEnabled(Ext_Zifencei)
-  <-> 0b000000000000 @ 0b00000 @ 0b001 @ 0b00000 @ 0b0001111 if extensionEnabled(Ext_Zifencei)
+mapping clause encdec = FENCEI(res1, res2) if extensionEnabled(Ext_Zifencei)
+  <-> res1 @ 0b001 @ res2 @ 0b0001111 if extensionEnabled(Ext_Zifencei)
 
 /* fence.i is a nop for the memory model */
-function clause execute FENCEI() = { /* __barrier(Barrier_RISCV_i); */ RETIRE_SUCCESS }
+function clause execute FENCEI(res1, res2) = { /* __barrier(Barrier_RISCV_i); */ RETIRE_SUCCESS }
 
-mapping clause assembly = FENCEI() <-> "fence.i"
+// mapping clause assembly = FENCEI() <-> "fence.i"

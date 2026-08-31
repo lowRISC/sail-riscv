@@ -34,21 +34,19 @@ struct TLB_Entry = {
 
 // PTE access functions, for reading flags, and for modifying the dirty and
 // accessed bits.
-function tlb_get_pte forall 'n, 'n in {4, 8}. (
-  pte_width : int('n),
-  ent       : TLB_Entry,
-) -> bits('n * 8) = ent.pte['n * 8 - 1 .. 0]
+function tlb_get_pte (
+  ent       : TLB_Entry
+) -> bits(64) = ent.pte[64 - 1 .. 0]
 
 function tlb_set_pte forall 'n, 'n in {4, 8}. (
   ent : TLB_Entry,
   pte : bits('n * 8),
 ) -> TLB_Entry = { ent with pte=zero_extend(pte) }
 
-function tlb_get_ppn forall 'v, is_sv_mode('v) . (
-  sv_width : int('v),
+function tlb_get_ppn (
   ent      : TLB_Entry,
-  vpn      : vpn_bits('v),
-) -> ppn_bits('v) = {
+  vpn      : vpn_bits,
+) -> ppn_bits = {
   // Sometimes the VPN is longer than the PPN (Sv39) and sometimes it is
   // shorter. This is ok because the most significant component can never be
   // included in the levelMask. To avoid complicated truncation and sign
@@ -61,7 +59,7 @@ function tlb_get_ppn forall 'v, is_sv_mode('v) . (
   // be zero_extend(ones(9 or 10)). The lowest 9 or 10 bits will
   // be taken from the translated vpn. The bits above that from the
   // cached ppn.
-  truncate(ppn | (vpn & levelMask), if 'v == 32 then 22 else 44)
+  truncate(ppn | (vpn & levelMask), 44)
 }
 
 // 64 entries is based on benchmarks of Linux boots and is where you stop
@@ -73,9 +71,8 @@ type tlb_index_range = range(0, num_tlb_entries - 1)
 register tlb : vector(num_tlb_entries, option(TLB_Entry)) = vector_init(None())
 
 // Indexed by the lowest bits of the VPN.
-function tlb_hash forall 'v, is_sv_mode('v) . (
-  sv_mode : int('v),
-  vpn     : vpn_bits('v),
+function tlb_hash (
+  vpn     : vpn_bits
 ) -> tlb_index_range =
   unsigned(vpn[5 .. 0])
 
@@ -113,12 +110,11 @@ function flush_TLB_Entry(ent   : TLB_Entry,
 }
 
 // PUBLIC: invoked in translate()
-function lookup_TLB forall 'v, is_sv_mode('v) . (
-  sv_width : int('v),
+function lookup_TLB (
   asid     : asidbits,
-  vpn      : vpn_bits('v),
+  vpn      : vpn_bits,
 ) -> option((tlb_index_range, TLB_Entry)) = {
-  let index = tlb_hash('v, vpn);
+  let index = tlb_hash(vpn);
   match tlb[index] {
     None() => None(),
     Some(entry) => {
@@ -128,17 +124,16 @@ function lookup_TLB forall 'v, is_sv_mode('v) . (
 }
 
 // PRIVATE
-function add_to_TLB forall 'v, is_sv_mode('v) . (
-  sv_width : int('v),
+function add_to_TLB (
   asid     : asidbits,
-  vpn      : vpn_bits('v),
-  ppn      : ppn_bits('v),
-  pte      : pte_bits('v),
+  vpn      : vpn_bits,
+  ppn      : ppn_bits,
+  pte      : pte_bits,
   pteAddr  : physaddr,
-  level    : level_range('v),
+  level    : level_range,
   global   : bool,
 ) -> unit = {
-  let shift = level * (if 'v == 32 then 10 else 9);
+  let shift = level * (9);
   let levelMask = ones(shift);
   // Clear bits below the level.
   let vpn = vpn & ~(zero_extend(levelMask));
@@ -156,7 +151,7 @@ function add_to_TLB forall 'v, is_sv_mode('v) . (
   // to add it to the index corresponding to the page because that is how
   // lookup_TLB looks it up. For superpages will just end up with the same
   // TLB entry in multiple slots.
-  let index = tlb_hash('v, vpn);
+  let index = tlb_hash(vpn);
   tlb[index] = Some(entry);
 }
 

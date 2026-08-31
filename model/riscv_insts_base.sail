@@ -499,10 +499,10 @@ mapping clause assembly = SHIFTIWOP(shamt, rs1, rd, op)
       if xlen == 64
 
 /* ****************************************************************** */
-union clause ast = FENCE : (bits(4), bits(4))
+union clause ast = FENCE : (bits(4), bits(4), bits(4), bits(5), bits(5))
 
-mapping clause encdec = FENCE(pred, succ)
-  <-> 0b0000 @ pred @ succ @ 0b00000 @ 0b000 @ 0b00000 @ 0b0001111
+mapping clause encdec = FENCE(pred, succ, res1, res2, res3)
+  <-> res1 @ pred @ succ @ res2 @ 0b000 @ res3 @ 0b0001111
 
 function effective_fence_set(set : bits(4), fiom : bool) -> bits(4) = {
   // The bits are IORW. If FIOM is set then I implies R and O implies W.
@@ -511,7 +511,7 @@ function effective_fence_set(set : bits(4), fiom : bool) -> bits(4) = {
   } else set
 }
 
-function clause execute (FENCE(pred, succ)) = {
+function clause execute (FENCE(pred, succ, res1, res2, res3)) = {
   // If the FIOM bit in menvcfg/senvcfg is set then the I/O bits can imply R/W.
   let fiom = is_fiom_active();
   let pred = effective_fence_set(pred, fiom);
@@ -561,28 +561,28 @@ mapping fence_bits : bits(4) <-> string = {
   i : bits(1) @ o : bits(1) @ r : bits(1) @ w : bits(1) <-> bit_maybe_i(i) ^ bit_maybe_o(o) ^ bit_maybe_r(r) ^ bit_maybe_w(w)
 }
 
-mapping clause assembly = FENCE(pred, succ)
-  <-> "fence" ^ spc() ^ fence_bits(pred) ^ sep() ^ fence_bits(succ)
+// mapping clause assembly = FENCE(pred, succ)
+//   <-> "fence" ^ spc() ^ fence_bits(pred) ^ sep() ^ fence_bits(succ)
 
 /* ****************************************************************** */
-union clause ast = FENCE_TSO : (bits(4), bits(4))
-
-mapping clause encdec = FENCE_TSO(pred, succ)
-  <-> 0b1000 @ pred @ succ @ 0b00000 @ 0b000 @ 0b00000 @ 0b0001111
-
-function clause execute (FENCE_TSO(pred, succ)) = {
-  match (pred, succ) {
-    (_ : bits(2) @ 0b11, _ : bits(2) @ 0b11) => sail_barrier(Barrier_RISCV_tso),
-    (_ : bits(2) @ 0b00, _ : bits(2) @ 0b00) => (),
-
-    _ => { print("FIXME: unsupported fence");
-           () }
-  };
-  RETIRE_SUCCESS
-}
-
-mapping clause assembly = FENCE_TSO(pred, succ)
-  <-> "fence.tso" ^ spc() ^ fence_bits(pred) ^ sep() ^ fence_bits(succ)
+// union clause ast = FENCE_TSO : (bits(4), bits(4))
+//
+// mapping clause encdec = FENCE_TSO(pred, succ)
+//   <-> 0b1000 @ pred @ succ @ 0b00000 @ 0b000 @ 0b00000 @ 0b0001111
+//
+// function clause execute (FENCE_TSO(pred, succ)) = {
+//   match (pred, succ) {
+//     (_ : bits(2) @ 0b11, _ : bits(2) @ 0b11) => sail_barrier(Barrier_RISCV_tso),
+//     (_ : bits(2) @ 0b00, _ : bits(2) @ 0b00) => (),
+//
+//     _ => { print("FIXME: unsupported fence");
+//            () }
+//   };
+//   RETIRE_SUCCESS
+// }
+//
+// mapping clause assembly = FENCE_TSO(pred, succ)
+//   <-> "fence.tso" ^ spc() ^ fence_bits(pred) ^ sep() ^ fence_bits(succ)
 
 /* ****************************************************************** */
 union clause ast = ECALL : unit
@@ -696,5 +696,5 @@ function clause execute SFENCE_VMA(rs1, rs2) = {
   }
 }
 
-mapping clause assembly = SFENCE_VMA(rs1, rs2)
-  <-> "sfence.vma" ^ spc() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+// mapping clause assembly = SFENCE_VMA(rs1, rs2)
+//   <-> "sfence.vma" ^ spc() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)

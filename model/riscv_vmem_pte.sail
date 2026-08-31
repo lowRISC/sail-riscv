@@ -14,14 +14,12 @@
 // Sv39/48/57    63..54    53..10    9..8    7..0
 
 // PRIVATE: extract ext bits of PTE above the PPN.
-val ext_bits_of_PTE : forall 'pte_size, 'pte_size in {32, 64}. bits('pte_size) -> option(PTE_Ext)
-function ext_bits_of_PTE(pte) =
-  if 'pte_size == 64 then Some(Mk_PTE_Ext(pte[63 .. 54])) else None()
+val ext_bits_of_PTE : bits(64) -> option(PTE_Ext)
+function ext_bits_of_PTE(pte) = Some(Mk_PTE_Ext(pte[63 .. 54]))
 
 // PRIVATE: extract full PPN from a PTE
-val PPN_of_PTE : forall 'pte_size, 'pte_size in {32, 64}.
-  bits('pte_size) -> bits(if 'pte_size == 32 then 22 else 44)
-function PPN_of_PTE(pte) = if 'pte_size == 32 then pte[31 .. 10] else pte[53 .. 10]
+val PPN_of_PTE : bits(64) -> bits(44)
+function PPN_of_PTE(pte) = pte[53 .. 10]
 
 // PRIVATE: check if a PTE is valid
 function pte_is_invalid(pte_flags : PTE_Flags, pte_ext : option(PTE_Ext)) -> bool =
@@ -46,10 +44,10 @@ function pte_is_invalid(pte_flags : PTE_Flags, pte_ext : option(PTE_Ext)) -> boo
   | ext_pte_is_invalid(pte_flags, pte_ext)
 
 // Return the updated the PTE with A/D set, if needed.
-function updated_pte_bits forall 'pte_size, 'pte_size in {32, 64} . (
-  pte : bits('pte_size),
+function updated_pte_bits (
+  pte : bits(64),
   a   : AccessType(ext_access_type),
-) -> option(bits('pte_size)) = {
+) -> option(bits(64)) = {
 
   let is_write : bool = match a {
     Execute()       => false,

@@ -32,13 +32,12 @@ function pte_permission_ok(
 // * Ok(None()) if no write was needed.
 // * Err(e) if a write was needed but there was an error.
 //
-function update_pte forall 'pte_width, 'pte_width in {4, 8} . (
-  pte_width : int('pte_width),
+function update_pte (
   pteAddr   : physaddr,
-  pte       : bits('pte_width * 8),
+  pte       : bits(64),
   ac        : AccessType(ext_access_type),
   ext_ptw   : ext_ptw,
-) -> (result(option(bits('pte_width * 8)), PTW_Error), ext_ptw) =
+) -> (result(option(bits(64)), PTW_Error), ext_ptw) =
   (match updated_pte_bits(pte, ac) {
     None() => Ok(None()),
     Some(pte) =>
@@ -47,7 +46,7 @@ function update_pte forall 'pte_width, 'pte_width in {4, 8} . (
         Err(PTW_PTE_Update())
       } else {
         // Writeback the PTE (which has new A/D bits).
-        match write_pte(pteAddr, 'pte_width, pte) {
+        match write_pte(pteAddr, 8, pte) {
           Ok(_) => Ok(Some(pte)),
           Err(_) => Err(PTW_Access()),
         }
